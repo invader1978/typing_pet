@@ -553,18 +553,32 @@ function update(){
     fx += dir * prof.speed;
   }
 
-  // 壁反転＋下げ
+  // 壁反転＋下げ（1回だけ確実に発火させる）
+  const margin = 10;
+  let hitWall = false;
+
   const leftEdge = fx;
   const rightEdge = fx + totalW;
 
   if(!ready && !clearing && !over){
-    if(rightEdge > innerWidth-10 || leftEdge < 10){
-      dir *= -1;
+    if (rightEdge > innerWidth - margin) {
+      // 右壁に当たった：内側に押し戻してから左へ
+      fx = (innerWidth - margin) - totalW;
+      dir = -1;
+      hitWall = true;
+    } else if (leftEdge < margin) {
+      // 左壁に当たった：内側に押し戻してから右へ
+      fx = margin;
+      dir = 1;
+      hitWall = true;
+    }
 
-      const wallDrop = 0.1;
+    if (hitWall) {
+      // 「少し下がる」を見える量に：U基準で
+      const wallDrop = 0.6 * U;  // 好みで 0.4〜1.0 * U くらい
       const enemyMaxY = playerTopY() - 120;
 
-      for(const e of enemies){
+      for (const e of enemies) {
         e.y = Math.min(enemyMaxY, e.y + wallDrop);
       }
     }
