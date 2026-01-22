@@ -3,33 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Slime Invader v7.4</title>
-
+<title>Slime Invader v7.5</title>
 <style>
 html,body{margin:0;padding:0;background:black;overflow:hidden;touch-action:none;}
 #bg{position:fixed;inset:0;}
 #hud{position:fixed;top:6px;left:6px;color:white;z-index:5;font-size:14px;}
-
 #player{position:absolute;bottom:90px;width:64px;height:56px;transform:translateX(-50%);z-index:5;}
 .pixel{position:absolute;width:8px;height:8px;}
-
 .bullet{position:absolute;width:4px;height:12px;background:cyan;}
 .ebullet{position:absolute;width:4px;height:12px;background:orange;}
-
 .enemy{position:absolute;width:56px;height:32px;}
 .enemy div{position:absolute;width:8px;height:8px;}
-
 .shield{position:absolute;}
 .shield .p{position:absolute;width:6px;height:6px;}
-
 .explode{position:absolute;width:4px;height:4px;background:orange;pointer-events:none;}
-
 .ufo{position:absolute;width:64px;height:28px;}
 .ufo div{position:absolute;width:8px;height:8px;background:#ff66ff;}
-
 #msg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
 font-size:36px;color:white;z-index:20;pointer-events:none;text-align:center;}
-
 #ctrl{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:10;}
 .btn{width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.5);
 border:2px solid cyan;color:white;font-size:22px;font-weight:bold;}
@@ -121,18 +112,17 @@ function shoot(){
 /* ===== 敵性能 ===== */
 function enemyProfile(){
  if(wave<3) return {colors:["#ffaaaa","#ff7777","#ff4444","#cc2222"],spd:1,fire:1,drop:1};
- if(wave<5) return {colors:["#f0ccff","#dd99ff","#cc66ff","#aa33ff"],spd:1.2,fire:1.3,drop:1.2};
- return {colors:["#bbffdd","#88ffbb","#55ff99","#22cc66"],spd:1.5,fire:1.6,drop:1.5};
+ if(wave<5) return {colors:["#f0ccff","#dd99ff","#cc66ff","#aa33ff"],spd:1.1,fire:1.2,drop:1.1};
+ return {colors:["#bbffdd","#88ffbb","#55ff99","#22cc66"],spd:1.2,fire:1.4,drop:1.2};
 }
 
 /* ===== 敵 ===== */
-let enemies=[],fx=0,fy=40,dir=1,cols=7,rows=4,enemyShootTimer=120,animTimer=0;
+let enemies=[],fx=0,dir=1,cols=7,rows=4,enemyShootTimer=120,animTimer=0;
 
 function spawnEnemies(){
  enemies.forEach(e=>e.el.remove()); enemies=[];
  const prof=enemyProfile();
  fx=innerWidth/2-cols*30;
- fy=Math.max(40,innerHeight*0.12);
  dir=1;
 
  const invaders = [
@@ -156,11 +146,12 @@ function spawnEnemies(){
    }
   }));
 
-  const ex = fx + c*60, ey = fy + r*50;
-  el.style.left = ex + "px"; el.style.top = ey + "px";
+  const ey = Math.max(40, innerHeight*0.12) + r*50;
+  el.style.left = (fx + c*60) + "px";
+  el.style.top  = ey + "px";
 
   document.body.appendChild(el);
-  enemies.push({el,fx:c*60,fy:r*50,x:ex,y:ey,type,frame:0});
+  enemies.push({el,fx:c*60,fy:ey,x:0,y:0,type,frame:0});
  }
 }
 
@@ -222,7 +213,8 @@ function spawnUFO(){
   }
  }));
 
- const y=fy-40, x=fromLeft?-80:innerWidth+80;
+ const y=enemies.length?Math.min(...enemies.map(e=>e.fy))-40:60;
+ const x=fromLeft?-80:innerWidth+80;
  el.style.left=x+"px"; el.style.top=y+"px";
  document.body.appendChild(el);
  ufo={el,x,y,dir:fromLeft?1:-1};
@@ -290,6 +282,7 @@ function update(){
 
  if(ready||over||clearing){ requestAnimationFrame(update); return; }
 
+ /* 足アニメ */
  animTimer++;
  if(animTimer>30){
   animTimer=0;
@@ -307,6 +300,7 @@ function update(){
   });
  }
 
+ /* UFO */
  if(!ufo && now>nextUfoTime){ spawnUFO(); nextUfoTime=now+rand(10000,20000); }
  if(ufo){
   ufo.x+=ufo.dir*(isMobile?2:3);
@@ -314,25 +308,29 @@ function update(){
   if(ufo.x<-100||ufo.x>innerWidth+100){ufo.el.remove();ufo=null;}
  }
 
+ /* 弾 */
  bullets.forEach((b,i)=>{ b.y-=12; b.style.top=b.y+"px"; if(b.y<0){b.remove();bullets.splice(i,1);} });
  ebullets.forEach((b,i)=>{ b.y+=isMobile?5:8; b.style.top=b.y+"px"; if(b.y>innerHeight){b.remove();ebullets.splice(i,1);} });
 
+ /* 敵移動 */
  const prof=enemyProfile();
- fx+=dir*((isMobile?0.25:0.4)*prof.spd + wave*0.025);
+ fx+=dir*((isMobile?0.2:0.35)*prof.spd + wave*0.02);
 
  if((fx+cols*60>innerWidth-20||fx<20) && waveStartTimer===0){
   dir*=-1;
-  const drop=(isMobile?3:10)*prof.drop + wave*0.5;
-  fy += isMobile ? Math.min(drop,8) : Math.min(drop,18);
+  const step = isMobile ? 3 : 10;
+  enemies.forEach(e=>{
+   e.fy += step * prof.drop * 0.5;
+  });
  }
 
- const hitLine = isMobile ? py()+20 : py()-10;
+ const hitLine = isMobile ? py()+60 : py()-10;
 
  enemies.forEach(e=>{
-  e.x=fx+e.fx; e.y=fy+e.fy;
+  e.x=fx+e.fx; e.y=e.fy;
   e.el.style.left=e.x+"px"; e.el.style.top=e.y+"px";
   if(e.y+32 > hitLine){
-   fy -= 30;
+   enemies.forEach(en=>en.fy-=20);
    if(invincible===0 && safeTimer===0){
     life--; lifeEl.textContent="❤️".repeat(life);
     explode(px,py()+20); invincible=60;
@@ -341,6 +339,7 @@ function update(){
   }
  });
 
+ /* 敵弾 */
  enemyShootTimer--;
  if(enemyShootTimer<=0 && enemies.length){
   const e=enemies[Math.floor(Math.random()*enemies.length)];
@@ -348,9 +347,10 @@ function update(){
   b.className="ebullet"; b.x=e.x+28; b.y=e.y+32;
   b.style.left=b.x+"px"; b.style.top=b.y+"px";
   document.body.appendChild(b); ebullets.push(b);
-  enemyShootTimer=Math.max(60,160/(enemyProfile().fire));
+  enemyShootTimer=Math.max(80,180/(enemyProfile().fire));
  }
 
+ /* 命中 */
  for(let i=enemies.length-1;i>=0;i--)for(let j=bullets.length-1;j>=0;j--){
   const e=enemies[i],b=bullets[j];
   if(hitXY(b.x,b.y,4,12,e.x,e.y,56,32)){
@@ -444,6 +444,5 @@ addEventListener("touchstart",()=>{ if(over) reset(); });
 /* ===== START ===== */
 reset(); update();
 </script>
-
 </body>
 </html>
