@@ -77,9 +77,9 @@ document.body.style.setProperty("--u", U);
 
 let isMobile = innerWidth < 800;
 
-/* ★モバイルは横8・縦3、PCは横12・縦4 */
-function getCols(){ return isMobile ? 8 : 12; }
-function getRows(){ return isMobile ? 3 : 4; }
+/* ★モバイルは横6・縦4（合計24）、PCは横12・縦4 */
+function getCols(){ return 11; }
+function getRows(){ return 5; }
 
 /* ========= Canvas 背景 ========= */
 const bg = document.getElementById("bg");
@@ -118,10 +118,7 @@ function hit(ax,ay,aw,ah,bx,by,bw,bh){
 
 /* ========= 色 ========= */
 function shieldColor(){
-  if (wave < 3) return "#66ffaa";
-  if (wave < 5) return "#66ccff";
-  if (wave < 8) return "#ffcc66";
-  return "#ff6666";
+  return "#ff3333"; // シールドは赤固定
 }
 function playerColor(){
   const sc = shieldColor();
@@ -156,11 +153,13 @@ function drawSprite(parent, spriteLines, color){
 /* ========= 自機 ========= */
 const playerEl = document.getElementById("player");
 const SHIP = [
+  "0001000",
   "0011100",
   "0111110",
   "1111111",
-  "1101011",
-  "1000001"
+  "1111111",
+  "0111110",
+  "1100011"
 ];
 
 let shipW, shipH;
@@ -173,10 +172,25 @@ const playerBottomPx = 70;
 let px = innerWidth/2;
 
 function recalcSizes(){
-  shipW   = 7*U;
-  shipH   = 5*U;
-  enemyW  = 7*U;
-  enemyH  = 4*U;
+  shipW   = SHIP[0].length * U;
+  shipH   = SHIP.length * U;
+    // 敵サイズ：11列でも「できるだけ詰めつつ」スクショ風に少し小さめ
+  const cols = getCols();
+  const margin = 12;
+    const minGapX = 0.90*U; // ★スクショ風：間隔を少し広め（横）
+  const availW = Math.max(120, innerWidth - margin*2);
+
+  // 画面幅に収まる最大サイズ（ギャップ込み）
+  const maxEnemyW = (availW - (cols-1)*minGapX) / cols;
+
+  // スクショの雰囲気：最大サイズより少し小さくして余白を作る
+  const scale = isMobile ? 0.78 : 0.86; // 敵を少し小さめにして余白を作る
+  const targetW = maxEnemyW * scale;
+
+  const baseEnemyW = 5.5*U;         // 上限（大きすぎ防止）
+  const minEnemyW  = 2.6*U;         // 下限（小さすぎ防止）
+  enemyW = Math.max(Math.min(minEnemyW, targetW), Math.min(baseEnemyW, targetW));
+  enemyH = enemyW * (4/7);
   shieldW = 8*U;
   shieldH = 6*U;
 }
@@ -195,6 +209,7 @@ updatePlayerPos();
 
 /* ========= 敵 ========= */
 const enemies = [];
+let enemyInitialCount = 0;
 let cols = getCols();
 let rows = getRows();
 
@@ -213,17 +228,29 @@ function enemyProfile(){
 }
 
 let fx = 0;
+let fy = 0;
 let dir = 1;
 let enemyAnimTick = 0;
 let enemyFrame = 0;
 let enemyShootTick = 0;
 
+// 8-bit風：敵は「一定間隔でカクカク移動」させる
+let moveAcc = 0;      // 経過ms
+let wallPause = 0;    // 壁に当たった直後の待ち(ms)
+
 function formationMetrics(){
-  // ★モバイルは横間隔を少し広げて見やすく（8列なので余裕あり）
-  const stepX = (isMobile ? 12 : 10) * U;
-  const stepY = 7 * U;
-  const totalW = (cols-1)*stepX + enemyW;
-  const baseY = Math.max(60, innerHeight*0.14);
+  // ★間隔をできるだけ狭める（敵サイズは recalcSizes() 側で幅に合わせて調整済み）
+  const cols = getCols();
+  const rows = getRows();
+
+  const minGapX = 0.90*U;
+  const minGapY = 1.10*U;
+
+  const stepX = enemyW + minGapX;
+  const stepY = enemyH + minGapY;
+
+  const totalW = cols*enemyW + (cols-1)*minGapX;
+  const baseY = Math.max(90, innerHeight*0.22); // スマホでスクショ風に少し下げる
   return { stepX, stepY, totalW, baseY };
 }
 
@@ -234,6 +261,7 @@ function spawnEnemies(){
   const { stepX, stepY, totalW, baseY } = formationMetrics();
 
   fx = (innerWidth - totalW)/2;
+  fy = baseY;
   dir = 1;
 
   for(let r=0;r<rows;r++){
@@ -241,9 +269,17 @@ function spawnEnemies(){
       const el = document.createElement("div");
       el.className = "enemy";
 
-      const type = ENEMY_TYPES[r % ENEMY_TYPES.length];
-      const colorBase = 60 + r*40;
-      const col = `rgb(${255-colorBase}, ${120-colorBase/2}, ${120-colorBase/2})`;
+            const type = ENEMY_TYPES[r % ENEMY_TYPES.length];
+
+      // 行ごとにハッキリ色分け（上から順に）
+      const ROW_COLORS = [
+        "#ff4d4d", // 1段目：赤
+        "#ffb84d", // 2段目：橙
+        "#ffff4d", // 3段目：黄
+        "#4dff4d", // 4段目：緑
+        "#4dd2ff"  // 5段目：水色
+      ];
+      const col = ROW_COLORS[r % ROW_COLORS.length];
 
       drawSprite(el, type.a, col);
       document.body.appendChild(el);
@@ -254,11 +290,16 @@ function spawnEnemies(){
         color: col,
         r, c,
         xOff: c*stepX,
-        y: baseY + r*stepY,
+        yOff: r*stepY,
+        y: 0,
         x: 0
       });
     }
   }
+
+  enemyInitialCount = enemies.length;
+  moveAcc = 0;
+  wallPause = 0;
 }
 
 /* ========= シールド ========= */
@@ -524,6 +565,10 @@ addEventListener("resize", ()=>{
 
 /* ========= ループ ========= */
 function update(){
+  const now = performance.now();
+  const dt = Math.min(34, now - (update._last || now));
+  update._last = now;
+
   // 背景
   ctx.fillStyle="#000";
   ctx.fillRect(0,0,bg.width,bg.height);
@@ -544,49 +589,66 @@ function update(){
     if(holdR) px += sp;
   }
   updatePlayerPos();
-
-  // 敵移動
+  // 敵移動（8-bit風：一定間隔でカクカク移動）
   const prof = enemyProfile();
   const { totalW } = formationMetrics();
 
+  // 移動間隔：ゆっくりめ（数が減ると速くなる“インベーダー感”）
+  const remaining = enemies.length || 1;
+  const initialCount = enemyInitialCount || remaining; // fallback
+  const ratio = remaining / initialCount;              // 1.0 → 0.0
+  const baseInterval = 260;                            // ここを大きくするともっとゆっくり
+  const minInterval  = 80;                             // 最速
+  let moveInterval = baseInterval * ratio + minInterval * (1 - ratio);
+  moveInterval = Math.max(minInterval, moveInterval) / (1 + (wave-1)*0.06);
+
+  const stepX = 0.55 * U * (1 + (wave-1)*0.02);        // 1回の横移動量
+  const stepDown = 0.60 * U;                           // 壁で下がる量（お好みで）
+
+  // 壁に当たった直後は少し“溜め”を入れるとそれっぽい
+  const wallPauseMs = 140;
+
   if(!ready && !clearing && !over){
-    fx += dir * prof.speed;
-  }
+    moveAcc += dt;
 
-  // 壁反転＋下げ（1回だけ確実に発火させる）
-  const margin = 10;
-  let hitWall = false;
-
-  const leftEdge = fx;
-  const rightEdge = fx + totalW;
-
-  if(!ready && !clearing && !over){
-    if (rightEdge > innerWidth - margin) {
-      // 右壁に当たった：内側に押し戻してから左へ
-      fx = (innerWidth - margin) - totalW;
-      dir = -1;
-      hitWall = true;
-    } else if (leftEdge < margin) {
-      // 左壁に当たった：内側に押し戻してから右へ
-      fx = margin;
-      dir = 1;
-      hitWall = true;
+    // 壁直後の待ち
+    if (wallPause > 0) {
+      const use = Math.min(wallPause, moveAcc);
+      wallPause -= use;
+      moveAcc -= use;
     }
 
-    if (hitWall) {
-      // 「少し下がる」を見える量に：U基準で
-      const wallDrop = 0.6 * U;  // 好みで 0.4〜1.0 * U くらい
-      const enemyMaxY = playerTopY() - 120;
+    while(moveAcc >= moveInterval){
+      moveAcc -= moveInterval;
 
-      for (const e of enemies) {
-        e.y = Math.min(enemyMaxY, e.y + wallDrop);
+      const margin = 10;
+      const nextFx = fx + dir * stepX;
+
+      const nextLeft = nextFx;
+      const nextRight = nextFx + totalW;
+
+      if(nextRight > innerWidth - margin || nextLeft < margin){
+        // 壁：反転して下へ（このtickでは横移動しない）
+        dir *= -1;
+
+        const enemyMaxY = playerTopY() - 120;
+        // 低い段まで行っても隊列間隔が潰れないよう、フォーメーション原点(fy)で管理
+        const stepY = 7 * U;
+        const maxFy = enemyMaxY - (rows-1) * stepY;
+        fy = Math.min(fy + stepDown, maxFy);
+
+        wallPause = wallPauseMs; // 次のtickまで少し待つ
+      }else{
+        fx = nextFx; // 横移動
       }
     }
   }
 
+
   // 敵座標更新
   for(const e of enemies){
     e.x = fx + e.xOff;
+    e.y = fy + e.yOff;
     e.el.style.left = e.x + "px";
     e.el.style.top  = e.y + "px";
   }
