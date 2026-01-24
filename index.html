@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8 (Mobile Single Shot / FAST + Pools + Cached Enemies)</title>
+<title>Invader Stable v8.1 (Cache FM / Faster Shield Contact / Curve Difficulty / Typed AliveIndex / iOS Canvas Only)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -115,24 +115,75 @@
   "use strict";
 
   /* =========================================================
-     v8 改修内容（このファイル内で完結）
-     1) 敵探索のキャッシュ化（aliveIds / aliveStats を保持、必要時のみ再計算）
-     2) 弾・爆発のオブジェクトプール（GC負荷低減）
-     3) 最後の1体の速度を現実的に（運ゲー回避）
-     4) アーキテクチャ整理（State / Systems / Renderer に分割）
+     v8.1 実装（指定項目）
+     ① formationMetrics キャッシュ化 / シールド接触判定の最適化
+     ② 定数を CONFIG として外出し
+     ③-8 敵発射間隔を指数カーブに
+     ④ aliveIndex を TypedArray 化 / iOSジェスチャ抑制を canvas 限定
   ========================================================= */
+
+  const CONFIG = {
+    enemy: {
+      cols: 11,
+      rows: 5,
+
+      // 移動
+      moveBaseInterval: 150,
+      moveMinInterval: 12,
+      moveLastOneCap: 10,
+      moveCurvePow: 1.55,
+      waveSpeedMulK: 0.06,
+
+      stepMoveXBaseMulU: 1.35,
+      stepMoveXWaveK: 0.03,
+      stepMoveXLastOneMul: 0.90,
+
+      stepDownMulU: 1.6,
+      wallPauseMs: 70,
+      wallMargin: 10,
+
+      // 発射（③-8：指数カーブ）
+      fireIntervalBase: 140,
+      fireIntervalDecay: 0.93,
+      fireIntervalMin: 22,
+
+      maxBulletsBase: 2,
+      maxBulletsWaveDiv: 4,
+      maxBulletsCap: 12,
+
+      burstBase: 1,
+      burstWaveDiv: 6,
+      burstCap: 3,
+    },
+    shield: {
+      contactEvery: 3,
+      contactMaxPerShield: 8,
+      contactPerEnemy: 3,
+      contactHitsCap: 40,
+      // ①：縦方向の余裕（敵帯が少し離れてたら判定しない）
+      contactYSlack: 24,
+    },
+    player: {
+      speedPC: 4,
+      speedMobile: 3,
+      invincibleFrames: 60,
+      bulletW: 4,
+      bulletH: 10,
+    }
+  };
 
   const UA = navigator.userAgent || "";
   const IS_IOS = /iP(hone|ad|od)/.test(UA);
 
-  if (IS_IOS) {
-    ["gesturestart","gesturechange","gestureend","dblclick"].forEach(t => {
-      document.addEventListener(t, e => e.preventDefault(), { passive:false });
-    });
-  }
-
   const cv = document.getElementById("cv");
   const ctx = cv.getContext("2d", { alpha:false }) || cv.getContext("2d");
+
+  // ④ iOSジェスチャ抑制：canvas 限定
+  if (IS_IOS) {
+    ["gesturestart","gesturechange","gestureend","dblclick"].forEach(t => {
+      cv.addEventListener(t, e => e.preventDefault(), { passive:false });
+    });
+  }
 
   const scoreEl = document.getElementById("score");
   const waveEl  = document.getElementById("wave");
@@ -201,7 +252,6 @@
     }
     releaseAt(i){
       const o = this._active[i];
-      // swap-remove
       this._active[i] = this._active[this._active.length-1];
       this._active.pop();
       this._reset(o);
@@ -209,14 +259,12 @@
     }
     get active(){ return this._active; }
     clear(){
-      for(let i=this._active.length-1;i>=0;i--){
-        this.releaseAt(i);
-      }
+      for(let i=this._active.length-1;i>=0;i--) this.releaseAt(i);
     }
   }
 
   /* =========================
-     State (ゲームの状態)
+     State
   ========================= */
   class GameState {
     constructor(){
@@ -251,8 +299,8 @@
 
       this.stars = [];
 
-      this.cols = 11;
-      this.rows = 5;
+      this.cols = CONFIG.enemy.cols;
+      this.rows = CONFIG.enemy.rows;
 
       this.fx = 0; this.fy = 0; this.dir = 1;
       this.prevFx = 0; this.prevFy = 0;
@@ -264,32 +312,32 @@
       this.moveAcc = 0;
       this.wallPause = 0;
 
-      // hpGrid はそのまま維持（描画・判定に便利）
       this.hpGrid = [];
 
       // 敵探索キャッシュ
-      // aliveIds: 生存敵の id (r*cols+c) の配列
-      // aliveIndex: id -> aliveIds 内の index（削除をO(1)）
-      // aliveStats: minC/maxC/maxR/count（壁判定など）
       this.aliveIds = [];
-      this.aliveIndex = [];
+      this.aliveIndex = null; // ④ TypedArray
       this.aliveStats = { minC:0, maxC:this.cols-1, maxR:this.rows-1, count:0 };
-      this.aliveDirty = true; // true の時のみ stats を再計算
+      this.aliveDirty = true;
 
       this.shields = [];
       this.shieldBoxes = [];
 
       this.shieldContactTick = 0;
-      this.shieldContactEvery = 3;
+      this.shieldContactEvery = CONFIG.shield.contactEvery;
 
-      this.BW = 4;
-      this.BH = 10;
+      this.BW = CONFIG.player.bulletW;
+      this.BH = CONFIG.player.bulletH;
 
       this.colors = {
         shield: () => "#ff3333",
         player: () => "#44ff88",
         row: ["#ff4d4d","#ffb84d","#ffff4d","#4dff4d","#4dd2ff"]
       };
+
+      // ① formationMetrics キャッシュ
+      this.fm = { stepX:0, stepY:0, totalW:0, baseY:0, minGapX:0, minGapY:0 };
+      this.fmDirty = true;
     }
 
     updateLifeHud(){
@@ -320,6 +368,8 @@
 
       this.shieldW = 8*this.U;
       this.shieldH = 6*this.U;
+
+      this.fmDirty = true; // ①
     }
 
     resetStars(){
@@ -330,23 +380,41 @@
       }));
     }
 
-    formationMetrics(){
+    // ① キャッシュ版 formationMetrics
+    _computeFormationMetrics(){
       const minGapX = 0.90*this.U, minGapY = 1.10*this.U;
       const stepX = this.enemyW + minGapX;
       const stepY = this.enemyH + minGapY;
       const totalW = this.cols*this.enemyW + (this.cols-1)*minGapX;
       const baseY = Math.max(90, innerHeight*0.22);
-      return { stepX, stepY, totalW, baseY };
+      this.fm = { stepX, stepY, totalW, baseY, minGapX, minGapY };
+      this.fmDirty = false;
+    }
+
+    getFM(){
+      if(this.fmDirty) this._computeFormationMetrics();
+      return this.fm;
     }
 
     rowKillScore(r){
       return (this.rows - r) * 10;
     }
 
+    // ③-8 指数カーブ
     enemyProfile(){
-      const fireInterval = Math.max(22, Math.floor(140 - (this.wave-1) * 8));
-      const maxBullets = Math.min(12, 2 + Math.floor((this.wave-1) / 4));
-      const burst = Math.min(3, 1 + Math.floor((this.wave-1) / 6));
+      const e = CONFIG.enemy;
+      const fireInterval = Math.max(
+        e.fireIntervalMin,
+        Math.floor(e.fireIntervalBase * Math.pow(e.fireIntervalDecay, Math.max(0, this.wave-1)))
+      );
+      const maxBullets = Math.min(
+        e.maxBulletsCap,
+        e.maxBulletsBase + Math.floor((this.wave-1) / e.maxBulletsWaveDiv)
+      );
+      const burst = Math.min(
+        e.burstCap,
+        e.burstBase + Math.floor((this.wave-1) / e.burstWaveDiv)
+      );
       return { fireInterval, maxBullets, burst };
     }
 
@@ -389,7 +457,10 @@
       const s = this.s;
       const total = s.rows * s.cols;
       s.aliveIds.length = 0;
-      s.aliveIndex = Array(total).fill(-1);
+
+      // ④ TypedArray
+      s.aliveIndex = new Int16Array(total);
+      s.aliveIndex.fill(-1);
 
       for(let r=0;r<s.rows;r++){
         for(let c=0;c<s.cols;c++){
@@ -427,22 +498,19 @@
 
     spawnEnemies(){
       const s = this.s;
-      s.cols = 11; s.rows = 5;
+      s.cols = CONFIG.enemy.cols; s.rows = CONFIG.enemy.rows;
+
       const hp2 = (s.wave >= 4);
-
-      s.hpGrid = Array.from({length:s.rows}, () =>
-        Array.from({length:s.cols}, () => 1)
-      );
-
+      s.hpGrid = Array.from({length:s.rows}, () => Array.from({length:s.cols}, () => 1));
       if (hp2) {
         for (let r=0;r<Math.min(2,s.rows);r++){
           for (let c=0;c<s.cols;c++) s.hpGrid[r][c] = 2;
         }
       }
 
-      const { totalW, baseY } = s.formationMetrics();
-      s.fx = (innerWidth - totalW)/2;
-      s.fy = baseY;
+      const fm = s.getFM();
+      s.fx = (innerWidth - fm.totalW)/2;
+      s.fy = fm.baseY;
       s.dir = 1;
 
       s.moveAcc = 0;
@@ -455,7 +523,6 @@
       this._rebuildAliveCache();
     }
 
-    // kill 処理：O(1)で aliveIds から除去
     onEnemyDamagedOrKilled(r,c){
       const s = this.s;
       if(s.hpGrid[r][c] > 0) return;
@@ -473,9 +540,7 @@
       s.aliveDirty = true;
     }
 
-    countAlive(){
-      return this.s.aliveIds.length;
-    }
+    countAlive(){ return this.s.aliveIds.length; }
 
     randomAliveRC(){
       const s = this.s;
@@ -503,12 +568,10 @@
   }
 
   /* =========================
-     Shield System（現状維持）
+     Shield System
   ========================= */
   class ShieldSystem {
-    constructor(state){
-      this.s = state;
-    }
+    constructor(state){ this.s = state; }
 
     spawnShields(){
       const s = this.s;
@@ -525,10 +588,7 @@
 
     relayoutShields(){
       const s = this.s;
-      if(!s.shields.length){
-        this.spawnShields();
-        return;
-      }
+      if(!s.shields.length){ this.spawnShields(); return; }
       const layout = s.computeShieldLayout();
       for(let i=0;i<s.shields.length && i<layout.length;i++){
         s.shields[i].x = layout[i].x;
@@ -579,7 +639,6 @@
       };
 
       if (best && tryDamage(best)) return true;
-
       for (let i=0;i<s.shieldBoxes.length;i++){
         const box = s.shieldBoxes[i];
         if (box === best) continue;
@@ -604,34 +663,20 @@
   }
 
   /* =========================
-     Projectile System（プール化）
+     Projectile System
   ========================= */
   class ProjectileSystem {
-    constructor(state, enemySystem, shieldSystem, effects){
+    constructor(state, enemySystem, shieldSystem){
       this.s = state;
       this.enemies = enemySystem;
       this.shields = shieldSystem;
-      this.fx = effects;
 
       const resetBullet = (b)=>{ b.x=0; b.y=0; b.v=0; };
       const resetBoom = (p)=>{ p.x=0; p.y=0; p.vx=0; p.vy=0; p.t=0; };
 
-      // ざっくり初期容量（端末により増える）
-      this.playerBullets = new Pool(
-        ()=>({x:0,y:0,v:0}),
-        resetBullet,
-        32
-      );
-      this.enemyBullets = new Pool(
-        ()=>({x:0,y:0,v:0}),
-        resetBullet,
-        64
-      );
-      this.booms = new Pool(
-        ()=>({x:0,y:0,vx:0,vy:0,t:0}),
-        resetBoom,
-        128
-      );
+      this.playerBullets = new Pool(()=>({x:0,y:0,v:0}), resetBullet, 32);
+      this.enemyBullets  = new Pool(()=>({x:0,y:0,v:0}), resetBullet, 64);
+      this.booms         = new Pool(()=>({x:0,y:0,vx:0,vy:0,t:0}), resetBoom, 128);
     }
 
     clearAll(){
@@ -660,7 +705,8 @@
       b.v = -10;
     }
 
-    enemyShoot(){
+    // ①：fm を受け取って再計算しない
+    enemyShoot(fm){
       const s = this.s;
       if(s.paused) return;
       if(s.ready || s.clearing || s.over) return;
@@ -672,8 +718,7 @@
       if(!pick) return;
 
       const {r,c} = pick;
-      const {stepX,stepY} = s.formationMetrics();
-      const ex = s.fx + c*stepX, ey = s.fy + r*stepY;
+      const ex = s.fx + c*fm.stepX, ey = s.fy + r*fm.stepY;
 
       const baseV = (s.isMobile ? 5 : 7);
       const add = Math.min(3, (s.wave-1) * 0.18);
@@ -691,22 +736,19 @@
 
     update(dt){
       const s = this.s;
+
       const pbs = this.playerBullets.active;
       for(let i=pbs.length-1;i>=0;i--){
         const b = pbs[i];
         b.y += b.v*(dt*0.06);
-        if(b.y < -20){
-          this.playerBullets.releaseAt(i);
-        }
+        if(b.y < -20) this.playerBullets.releaseAt(i);
       }
 
       const ebs = this.enemyBullets.active;
       for(let i=ebs.length-1;i>=0;i--){
         const b = ebs[i];
         b.y += b.v*(dt*0.06);
-        if(b.y > innerHeight + 30){
-          this.enemyBullets.releaseAt(i);
-        }
+        if(b.y > innerHeight + 30) this.enemyBullets.releaseAt(i);
       }
 
       const booms = this.booms.active;
@@ -715,9 +757,7 @@
         p.x += p.vx;
         p.y += p.vy;
         p.t--;
-        if(p.t <= 0){
-          this.booms.releaseAt(i);
-        }
+        if(p.t <= 0) this.booms.releaseAt(i);
       }
     }
   }
@@ -733,7 +773,6 @@
       this.pj = projectiles;
     }
 
-    // 体当たり演出：ヒットした瞬間に「ピタ止め」してからGAME OVER
     triggerRamming(contactFy){
       const s = this.s;
       if(s.over) return;
@@ -789,45 +828,76 @@
       }, 900);
     }
 
-    detect(){
+    // ①：fm を受け取って使い回す
+    detect(fm){
       const s = this.s;
       if(s.paused) return;
       if(s.hitStop > 0) return;
 
-      // 敵がシールドに触れている間：少しずつ削る（aliveIdsのみで判定）
+      // ①：敵がシールドに触れている間の削り判定を軽量化
       s.shieldContactTick++;
-      if(s.shieldContactTick % s.shieldContactEvery === 0 && s.shieldBoxes.length){
-        const {stepX, stepY} = s.formationMetrics();
+      if(s.shieldContactTick % s.shieldContactEvery === 0 && s.shieldBoxes.length && s.aliveIds.length){
+
+        const st = this.enemies.getAliveStats();
+        const maxAliveR = st.maxR;
+        const enemyTop = s.fy;
+        const enemyBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+
+        // 縦方向で遠いなら一括スキップ（①）
+        let anyShieldInBand = false;
+        const slack = CONFIG.shield.contactYSlack;
         for(const box of s.shieldBoxes){
-          let contacts = 0;
-          const aliveIds = s.aliveIds;
-          for(let i=0;i<aliveIds.length;i++){
-            const id = aliveIds[i];
-            const r = (id / s.cols) | 0;
-            const c = id - r*s.cols;
-            const ex = s.fx + c*stepX;
-            const ey = s.fy + r*stepY;
-            if(aabb(ex, ey, s.enemyW, s.enemyH, box.x, box.y, box.w, box.h)){
-              contacts++;
-              if(contacts >= 8) break;
-            }
+          if(!(box.y > enemyBottom + slack || (box.y + box.h) < enemyTop - slack)){
+            anyShieldInBand = true;
+            break;
           }
-          if(contacts > 0){
-            const perEnemy = 3;
-            const hits = Math.min(40, contacts * perEnemy);
-            this.shields.damageShieldRandom(box.ref, hits);
+        }
+
+        if(anyShieldInBand){
+          const aliveIds = s.aliveIds;
+
+          for(const box of s.shieldBoxes){
+            // 縦方向でこのシールドが敵帯と離れてたらスキップ（①）
+            if(box.y > enemyBottom + slack || (box.y + box.h) < enemyTop - slack) continue;
+
+            // 列範囲で絞る（①）
+            // box の x 範囲から、隊列座標系の列index範囲を推定
+            const cMin = clamp(Math.floor((box.x - s.fx) / fm.stepX) - 1, 0, s.cols-1);
+            const cMax = clamp(Math.floor(((box.x + box.w) - s.fx) / fm.stepX) + 1, 0, s.cols-1);
+
+            let contacts = 0;
+
+            for(let i=0;i<aliveIds.length;i++){
+              const id = aliveIds[i];
+              const r = (id / s.cols) | 0;
+              const c = id - r*s.cols;
+
+              if(c < cMin || c > cMax) continue; // ① 早期continue
+
+              const ex = s.fx + c*fm.stepX;
+              const ey = s.fy + r*fm.stepY;
+
+              if(aabb(ex, ey, s.enemyW, s.enemyH, box.x, box.y, box.w, box.h)){
+                contacts++;
+                if(contacts >= CONFIG.shield.contactMaxPerShield) break;
+              }
+            }
+
+            if(contacts > 0){
+              const hits = Math.min(CONFIG.shield.contactHitsCap, contacts * CONFIG.shield.contactPerEnemy);
+              this.shields.damageShieldRandom(box.ref, hits);
+            }
           }
         }
       }
 
-      // 敵の体当たり（スイープAABB）… aliveIdsのみ
+      // 敵の体当たり（スイープAABB）
       if(!s.over && !s.ready && !s.clearing){
         const shipX = s.px - s.shipW/2;
         const shipY = s.playerTopY();
         const shipW = s.shipW;
         const shipH = s.shipH;
 
-        const { stepX, stepY } = s.formationMetrics();
         const fx0 = (typeof s.prevFx === "number") ? s.prevFx : s.fx;
         const fy0 = (typeof s.prevFy === "number") ? s.prevFy : s.fy;
 
@@ -840,10 +910,10 @@
           const r = (id / s.cols) | 0;
           const c = id - r*s.cols;
 
-          const exA = fx0 + c*stepX;
-          const eyA = fy0 + r*stepY;
-          const exB = s.fx + c*stepX;
-          const eyB = s.fy + r*stepY;
+          const exA = fx0 + c*fm.stepX;
+          const eyA = fy0 + r*fm.stepY;
+          const exB = s.fx + c*fm.stepX;
+          const eyB = s.fy + r*fm.stepY;
 
           const sx = Math.min(exA, exB);
           const sy = Math.min(eyA, eyB);
@@ -852,7 +922,7 @@
 
           if(aabb(sx, sy, sw, sh, shipX, shipY, shipW, shipH)){
             if(maxAliveR >= 0){
-              const enemyBottom = s.fy + maxAliveR*stepY + s.enemyH;
+              const enemyBottom = s.fy + maxAliveR*fm.stepY + s.enemyH;
               const over = enemyBottom - shipY;
               if(over > 0) s.fy -= over;
             }
@@ -885,21 +955,20 @@
         if(this.shields.shieldHitAndDamage(b.x,b.y,s.BW,s.BH)) this.pj.enemyBullets.releaseAt(i);
       }
 
-      // 敵が自機に体当たり（即オーバー）
+      // 敵が自機に体当たり
       if(!s.over){
         const pl = s.px - s.shipW/2;
         const pt = s.playerTopY();
-        const {stepX, stepY} = s.formationMetrics();
 
         const aliveIds = s.aliveIds;
         for(let i=0;i<aliveIds.length;i++){
           const id = aliveIds[i];
           const r = (id / s.cols) | 0;
           const c = id - r*s.cols;
-          const ex = s.fx + c*stepX;
-          const ey = s.fy + r*stepY;
+          const ex = s.fx + c*fm.stepX;
+          const ey = s.fy + r*fm.stepY;
           if(aabb(ex,ey,s.enemyW,s.enemyH, pl,pt,s.shipW,s.shipH)){
-            s.fy = pt - (r * stepY + s.enemyH);
+            s.fy = pt - (r * fm.stepY + s.enemyH);
             this.triggerRamming(s.fy);
             return;
           }
@@ -907,14 +976,13 @@
       }
 
       // 自弾 vs 敵
-      const {stepX,stepY} = s.formationMetrics();
       for(let i=pbs.length-1;i>=0;i--){
         const b = pbs[i];
-        const c = Math.floor((b.x - s.fx)/stepX);
-        const r = Math.floor((b.y - s.fy)/stepY);
+        const c = Math.floor((b.x - s.fx)/fm.stepX);
+        const r = Math.floor((b.y - s.fy)/fm.stepY);
         if(r>=0 && r<s.rows && c>=0 && c<s.cols && s.hpGrid[r][c] > 0){
-          const ex = s.fx + c*stepX;
-          const ey = s.fy + r*stepY;
+          const ex = s.fx + c*fm.stepX;
+          const ey = s.fy + r*fm.stepY;
           if(aabb(b.x,b.y,s.BW,s.BH, ex,ey, s.enemyW,s.enemyH)){
             this.pj.playerBullets.releaseAt(i);
 
@@ -923,7 +991,6 @@
 
             if(s.hpGrid[r][c] <= 0){
               this.enemies.onEnemyDamagedOrKilled(r,c);
-
               s.score += s.rowKillScore(r);
               scoreEl.textContent = s.score;
 
@@ -948,7 +1015,7 @@
               s.life--;
               s.updateLifeHud();
               this.pj.boom(s.px, pt+s.shipH/2);
-              s.invincible = 60;
+              s.invincible = CONFIG.player.invincibleFrames;
               if(s.life<=0) this.gameOver();
             }
           }
@@ -958,7 +1025,7 @@
   }
 
   /* =========================
-     Movement / Wave logic
+     GameLogic
   ========================= */
   class GameLogic {
     constructor(state, enemies, shields, projectiles, collisions){
@@ -1028,13 +1095,11 @@
       const s = this.s;
       if(s.paused) return;
 
-      // ヒット停止
       if(s.hitStop > 0){
         s.hitStop -= dt;
         return;
       }
 
-      // stars
       for(const st of s.stars){
         st.y += st.s * (dt*0.06);
         if(st.y > innerHeight){
@@ -1046,8 +1111,7 @@
       if(s.invincible > 0) s.invincible--;
       if(s.safeTimer > 0) s.safeTimer--;
 
-      // player move
-      const sp = s.isMobile ? 3 : 4;
+      const sp = s.isMobile ? CONFIG.player.speedMobile : CONFIG.player.speedPC;
       if(!s.ready && !s.clearing && !s.over){
         if(s.holdL) s.px -= sp;
         if(s.holdR) s.px += sp;
@@ -1058,43 +1122,35 @@
       s.prevFx = s.fx;
       s.prevFy = s.fy;
 
-      const { stepX, stepY } = s.formationMetrics();
+      // ①：fm を使い回す
+      const fm = s.getFM();
+
       const remaining = Math.max(1, this.enemies.countAlive());
       const initialCount = s.enemyInitialCount || remaining;
       const ratio = remaining / initialCount;
 
-      // stats（壁判定用）
       const st = this.enemies.getAliveStats();
       const minAliveC = st.minC;
       const maxAliveC = st.maxC;
       const maxAliveR = st.maxR;
 
-      /* =========================================================
-         速度調整（最後の1体を運ゲーにしない）
-         - ベースは速いまま
-         - 最後の1体は 10ms より速くしない（+最低ラインも10ms）
-      ========================================================= */
-      const baseInterval = 150;
-      const minInterval  = 12;   // 終盤の限界（全体）
-      const lastOneCap   = 10;   // 最後の1体の上限（これより速くしない）
+      const e = CONFIG.enemy;
 
+      // 速度調整（元ロジックを CONFIG 化）
       const t = 1 - ratio;
-      const curve = Math.pow(t, 1.55);
+      const curve = Math.pow(t, e.moveCurvePow);
+      let moveInterval = e.moveBaseInterval * (1 - curve) + e.moveMinInterval * curve;
 
-      let moveInterval = baseInterval * (1 - curve) + minInterval * curve;
-
-      const waveSpeedMul = 1 / (1 + (s.wave - 1) * 0.06);
+      const waveSpeedMul = 1 / (1 + (s.wave - 1) * e.waveSpeedMulK);
       moveInterval *= waveSpeedMul;
 
-      if (remaining === 1) moveInterval = Math.max(moveInterval, lastOneCap);
+      if (remaining === 1) moveInterval = Math.max(moveInterval, e.moveLastOneCap);
       moveInterval = Math.max(10, moveInterval);
 
-      // 横移動量：最後の1体だけ少し落とす（当てられる余地を残す）
-      let stepMoveX = 1.35*s.U*(1+(s.wave-1)*0.03);
-      if(remaining === 1) stepMoveX *= 0.90;
+      let stepMoveX = e.stepMoveXBaseMulU*s.U*(1+(s.wave-1)*e.stepMoveXWaveK);
+      if(remaining === 1) stepMoveX *= e.stepMoveXLastOneMul;
 
-      const stepDown  = 1.6*s.U;
-      const wallPauseMs = 70;
+      const stepDown  = e.stepDownMulU*s.U;
 
       if(!s.ready && !s.clearing && !s.over){
         s.moveAcc += dt;
@@ -1105,45 +1161,45 @@
         }
         while(s.moveAcc >= moveInterval){
           s.moveAcc -= moveInterval;
-          const margin = 10;
+
           const nextFx = s.fx + s.dir * stepMoveX;
 
-          const nextAliveLeft  = nextFx + minAliveC * stepX;
-          const nextAliveRight = nextFx + maxAliveC * stepX + s.enemyW;
+          const nextAliveLeft  = nextFx + minAliveC * fm.stepX;
+          const nextAliveRight = nextFx + maxAliveC * fm.stepX + s.enemyW;
 
-          if (nextAliveRight > innerWidth - margin) {
-            const overflow = nextAliveRight - (innerWidth - margin);
+          if (nextAliveRight > innerWidth - e.wallMargin) {
+            const overflow = nextAliveRight - (innerWidth - e.wallMargin);
             s.fx = nextFx - overflow;
             s.dir = -1;
             s.fy += stepDown;
 
             const playerTop = s.playerTopY();
-            const lowestBottom = s.fy + maxAliveR * stepY + s.enemyH;
+            const lowestBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
             if (lowestBottom >= playerTop) {
-              s.fy = playerTop - (maxAliveR * stepY + s.enemyH);
+              s.fy = playerTop - (maxAliveR * fm.stepY + s.enemyH);
               this.col.triggerRamming(s.fy);
               return;
             }
 
-            s.wallPause = wallPauseMs;
+            s.wallPause = e.wallPauseMs;
             s.moveAcc = 0;
             break;
 
-          } else if (nextAliveLeft < margin) {
-            const overflow = margin - nextAliveLeft;
+          } else if (nextAliveLeft < e.wallMargin) {
+            const overflow = e.wallMargin - nextAliveLeft;
             s.fx = nextFx + overflow;
             s.dir = 1;
             s.fy += stepDown;
 
             const playerTop = s.playerTopY();
-            const lowestBottom = s.fy + maxAliveR * stepY + s.enemyH;
+            const lowestBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
             if (lowestBottom >= playerTop) {
-              s.fy = playerTop - (maxAliveR * stepY + s.enemyH);
+              s.fy = playerTop - (maxAliveR * fm.stepY + s.enemyH);
               this.col.triggerRamming(s.fy);
               return;
             }
 
-            s.wallPause = wallPauseMs;
+            s.wallPause = e.wallPauseMs;
             s.moveAcc = 0;
             break;
 
@@ -1153,7 +1209,6 @@
         }
       }
 
-      // enemy anim / shoot
       this.enemies.updateAnim();
 
       if(!s.ready && !s.clearing && !s.over){
@@ -1161,11 +1216,10 @@
         s.enemyShootTick++;
         if(s.enemyShootTick >= prof.fireInterval){
           s.enemyShootTick = 0;
-          this.pj.enemyShoot();
+          this.pj.enemyShoot(fm); // ①
         }
       }
 
-      // projectiles update
       this.pj.update(dt);
     }
   }
@@ -1180,6 +1234,7 @@
     }
     render(){
       const s = this.s;
+      const fm = s.getFM(); // ① 使い回し（Renderer側でも）
 
       ctx.fillStyle="#000";
       ctx.fillRect(0,0,innerWidth,innerHeight);
@@ -1197,15 +1252,14 @@
         }
       }
 
-      const {stepX,stepY} = s.formationMetrics();
       for(let r=0;r<s.rows;r++){
         for(let c=0;c<s.cols;c++){
           if(s.hpGrid[r][c] <= 0) continue;
           const type = ENEMY_TYPES[r % ENEMY_TYPES.length];
           const bmp = s.enemyFrame ? type.b : type.a;
           const color = s.colors.row[r % s.colors.row.length];
-          const x = s.fx + c*stepX;
-          const y = s.fy + r*stepY;
+          const x = s.fx + c*fm.stepX;
+          const y = s.fy + r*fm.stepY;
           const scale = Math.max(1, Math.round(s.enemyW/7));
           drawBitmap(bmp, x, y, scale, color);
 
@@ -1235,13 +1289,12 @@
   }
 
   /* =========================
-     Input（ほぼそのまま）
+     Input
   ========================= */
   const state = new GameState();
   const enemies = new EnemySystem(state);
   const shields = new ShieldSystem(state);
 
-  // projectiles は enemies/shields 参照するので後で構築
   let projectiles, collisions, logic, renderer;
 
   const Input = {
@@ -1301,11 +1354,7 @@
     }
   };
 
-  /* =========================
-     Wiring / Events
-  ========================= */
   function rebuildSystems(){
-    // systems は state を共有しつつ、依存順に組む
     projectiles = new ProjectileSystem(state, enemies, shields);
     collisions  = new CollisionSystem(state, enemies, shields, projectiles);
     logic       = new GameLogic(state, enemies, shields, projectiles, collisions);
@@ -1416,16 +1465,16 @@
       Input.updateControlsVisibility();
 
       if(bpChanged){
-        // ブレイクポイント変化時は完全リセット（操作系/当たり判定のズレ防止）
         logic.reset();
         return;
       }
 
       shields.relayoutShields();
 
-      const {totalW, baseY} = state.formationMetrics();
-      state.fx = (innerWidth - totalW)/2;
-      state.fy = baseY;
+      // ① キャッシュ更新してから再配置
+      const fm = state.getFM();
+      state.fx = (innerWidth - fm.totalW)/2;
+      state.fy = fm.baseY;
 
       if(state.paused) Input.stickReset();
     });
@@ -1436,8 +1485,11 @@
     const dt = Math.min(34, now - (loop._last || now));
     loop._last = now;
 
+    // ①：このフレームの fm を1回取得して下へ渡す
+    const fm = state.getFM();
+
     logic.update(dt);
-    collisions.detect();
+    collisions.detect(fm);
     renderer.render();
 
     requestAnimationFrame(loop);
