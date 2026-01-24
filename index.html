@@ -2,14 +2,15 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v6 + Stick + Pause (iOS26 No-Zoom)</title>
+<meta name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Invader Stable v7 (Mobile Single Shot / ULTRA FAST)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
     touch-action:none;
     overscroll-behavior:none;
-    -webkit-overflow-scrolling:auto; /* iOS系での挙動安定 */
+    -webkit-overflow-scrolling:auto;
     -webkit-text-size-adjust:100%;
   }
   canvas{position:fixed;inset:0;display:block;touch-action:none;pointer-events:auto}
@@ -37,7 +38,6 @@
     z-index:40;pointer-events:none;text-align:center;white-space:pre-line;
   }
 
-  /* ===== Mobile controls ===== */
   .controls{position:fixed;inset:0;z-index:70;pointer-events:none}
 
   #stickBase,#stickKnob{
@@ -86,7 +86,6 @@
   }
 
   @media (pointer: fine) {
-    /* マウス主体の端末では仮想コントローラ非表示 */
     .controls{display:none;}
   }
 </style>
@@ -111,708 +110,896 @@
 </div>
 
 <script>
-/* =========================
-   iOS Safari (Smart Zoom) 完全抑止
-========================= */
-['gesturestart','gesturechange','gestureend','dblclick'].forEach(t=>{
-  document.addEventListener(t, e=>e.preventDefault(), {passive:false});
-});
-// shootBtn上のタッチはズーム等を確実に抑止
-['touchstart','touchmove','touchend'].forEach(t=>{
-  document.addEventListener(t, e=>{
-    if(e.target && e.target.id==='shootBtn') e.preventDefault();
-  }, {passive:false});
-});
+(() => {
+  "use strict";
 
-/* =========================
-   基本設定
-========================= */
-const cv = document.getElementById("cv");
-const ctx = cv.getContext("2d", { alpha:false });
+  const UA = navigator.userAgent || "";
+  const IS_IOS = /iP(hone|ad|od)/.test(UA);
 
-function resizeCanvas(){ cv.width = innerWidth; cv.height = innerHeight; }
-resizeCanvas();
-
-function calcU(){ if (innerWidth>=1200) return 7; if (innerWidth>=800) return 6; return 4; }
-let U = calcU();
-let isMobile = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-
-function getCols(){ return 11; }
-function getRows(){ return 5; }
-
-const scoreEl = document.getElementById("score");
-const waveEl  = document.getElementById("wave");
-const lifeEl  = document.getElementById("life");
-const msgEl   = document.getElementById("msg");
-
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function aabb(ax,ay,aw,ah,bx,by,bw,bh){
-  return !(ax+aw<bx || ax>bx+bw || ay+ah<by || ay>by+bh);
-}
-
-/* =========================
-   ポーズ
-========================= */
-const pauseBtn = document.getElementById("pauseBtn");
-let paused = false;
-let msgBeforePause = "";
-
-function setPaused(next){
-  if(over) return;
-  paused = !!next;
-  pauseBtn.textContent = paused ? "RESUME" : "PAUSE";
-  if(paused){
-    msgBeforePause = msgEl.innerHTML;
-    msgEl.textContent = "PAUSED";
-    holdL = false; holdR = false;
-    stopShooting(); stickReset(); canShoot = true;
-  }else{
-    if(msgBeforePause && msgBeforePause!=="PAUSED") msgEl.innerHTML = msgBeforePause;
-    else msgEl.textContent = "";
-    msgBeforePause = "";
-  }
-}
-function togglePause(){ setPaused(!paused); }
-pauseBtn.addEventListener("click", (e)=>{ e.preventDefault(); togglePause(); }, {passive:false});
-
-/* =========================
-   スプライト
-========================= */
-const SHIP = [
-  "000010000","000111000","000111000",
-  "011111110","111111111","111111111","111111111"
-];
-
-const ENEMY_TYPES = [
-  { a:["0100010","1111111","1011101","0100010"], b:["0100010","1111111","0101010","1010101"] },
-  { a:["0011100","0111110","1101011","0111110"], b:["0011100","1111111","0101010","1010101"] },
-  { a:["0110110","1111111","0101010","1010101"], b:["0011100","0111110","1101011","0111110"] },
-  { a:["0011100","1111111","1010101","0100010"], b:["0011100","0111110","0101010","1010101"] }
-];
-
-const SHIELD = [
-  "00111100","01111110","11111111","11111111","11111111","11000011"
-];
-
-function drawBitmap(lines, x, y, scale, color){
-  ctx.fillStyle = color;
-  for(let r=0;r<lines.length;r++){
-    const row = lines[r];
-    for(let c=0;c<row.length;c++){
-      if(row[c]==="1") ctx.fillRect(x+c*scale, y+r*scale, scale, scale);
-    }
-  }
-}
-
-/* =========================
-   色
-========================= */
-function shieldColor(){ return "#ff3333"; }
-function playerColor(){ return "#44ff88"; }
-const ROW_COLORS = ["#ff4d4d","#ffb84d","#ffff4d","#4dff4d","#4dd2ff"];
-
-/* =========================
-   サイズ
-========================= */
-let shipW=0, shipH=0, enemyW=0, enemyH=0, shieldW=0, shieldH=0;
-
-function recalcSizes(){
-  shipW = SHIP[0].length * U;
-  shipH = SHIP.length * U;
-
-  const cols = getCols();
-  const margin = 12;
-  const minGapX = 0.90*U;
-  const availW = Math.max(120, innerWidth - margin*2);
-  const maxEnemyW = (availW - (cols-1)*minGapX) / cols;
-  const scale = isMobile ? 0.78 : 0.86;
-  const targetW = maxEnemyW * scale;
-
-  enemyW = clamp(targetW, 2.6*U, 5.5*U);
-  enemyH = enemyW * (4/7);
-
-  shieldW = 8*U;
-  shieldH = 6*U;
-}
-recalcSizes();
-
-/* =========================
-   背景スター
-========================= */
-let stars = [];
-function resetStars(){
-  stars = [...Array(120)].map(()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:0.6+Math.random()*1.2}));
-}
-resetStars();
-
-/* =========================
-   ゲーム状態
-========================= */
-let score=0, wave=1, life=3;
-let ready=true, clearing=false, over=false;
-let invincible=0, safeTimer=0;
-let canShoot=true;
-let holdL=false, holdR=false;
-
-function updateLifeHud(){ lifeEl.textContent = "❤️".repeat(Math.max(0, life)); }
-
-/* =========================
-   自機
-========================= */
-const playerBottomPx = 70;
-let px = innerWidth/2;
-
-function playerTopY(){ return innerHeight - playerBottomPx - shipH; }
-function clampPlayer(){ px = clamp(px, shipW/2, innerWidth - shipW/2); }
-
-/* =========================
-   敵隊列
-========================= */
-let cols = getCols(), rows = getRows();
-let fx=0, fy=0, dir=1;
-let enemyInitialCount = 0;
-let enemyFrame = 0, enemyAnimTick = 0, enemyShootTick = 0;
-let moveAcc = 0, wallPause = 0;
-let aliveGrid = [];
-
-function formationMetrics(){
-  const minGapX = 0.90*U, minGapY = 1.10*U;
-  const stepX = enemyW + minGapX;
-  const stepY = enemyH + minGapY;
-  const totalW = cols*enemyW + (cols-1)*minGapX;
-  const baseY = Math.max(90, innerHeight*0.22);
-  return { stepX, stepY, totalW, baseY };
-}
-
-function countAlive(){
-  let n=0;
-  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(aliveGrid[r][c]) n++;
-  return n;
-}
-
-function spawnEnemies(){
-  cols = getCols(); rows = getRows();
-  aliveGrid = Array.from({length:rows}, ()=>Array.from({length:cols}, ()=>true));
-  const { totalW, baseY } = formationMetrics();
-  fx = (innerWidth - totalW)/2; fy = baseY; dir = 1;
-  enemyInitialCount = rows*cols;
-  moveAcc = 0; wallPause = 0; enemyFrame = 0; enemyAnimTick = 0; enemyShootTick = 0;
-}
-
-/* =========================
-   盾（シールド再配置入り）
-========================= */
-let shields = [];
-function buildShieldBits(){
-  const h = SHIELD.length, w = SHIELD[0].length;
-  const bits = Array.from({length:h}, (_,r)=>Array.from({length:w},(_,c)=>SHIELD[r][c]==="1"));
-  return {bits,w,h};
-}
-
-function computeShieldLayout(){
-  const topMin = 40;            // 画面上の最低ライン
-  const gapFromPlayer = 14;     // 自機との最低距離
-  const defaultOffset = 80;     // 従来の -80
-
-  const playerY = playerTopY();
-  let y = playerY - defaultOffset;
-
-  const maxY = playerY - shieldH - gapFromPlayer;
-  y = Math.min(y, maxY);
-  y = Math.max(y, topMin);
-
-  if(maxY < topMin){
-    y = Math.max(0, maxY);
+  if (IS_IOS) {
+    ["gesturestart","gesturechange","gestureend","dblclick"].forEach(t => {
+      document.addEventListener(t, e => e.preventDefault(), { passive:false });
+    });
   }
 
-  const xs = [0.2,0.4,0.6,0.8];
-  return xs.map(v => ({ x: innerWidth * v - shieldW/2, y }));
-}
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d", { alpha:false }) || cv.getContext("2d");
 
-function spawnShields(){
-  shields = [];
-  const proto = buildShieldBits();
-  const layout = computeShieldLayout();
-  for(let i=0;i<layout.length;i++){
-    const {x,y} = layout[i];
-    const bits = proto.bits.map(row=>row.slice());
-    shields.push({x,y,bits,w:proto.w,h:proto.h});
-  }
-}
+  const scoreEl = document.getElementById("score");
+  const waveEl  = document.getElementById("wave");
+  const lifeEl  = document.getElementById("life");
+  const msgEl   = document.getElementById("msg");
+  const pauseBtn = document.getElementById("pauseBtn");
 
-function relayoutShields(){
-  if(!shields.length){
-    spawnShields();
-    return;
-  }
-  const layout = computeShieldLayout();
-  for(let i=0;i<shields.length && i<layout.length;i++){
-    shields[i].x = layout[i].x;
-    shields[i].y = layout[i].y;
-  }
-}
+  const controls = document.getElementById("controls");
+  const stickBase = document.getElementById("stickBase");
+  const stickKnob = document.getElementById("stickKnob");
+  const shootBtn = document.getElementById("shootBtn");
 
-function shieldHitAndDamage(bx,by,bw,bh){
-  for(const s of shields){
-    if(!aabb(bx,by,bw,bh, s.x,s.y, shieldW,shieldH)) continue;
-    const rx = clamp(Math.floor(((bx+bw/2)-s.x)/U),0,s.w-1);
-    const ry = clamp(Math.floor(((by+bh/2)-s.y)/U),0,s.h-1);
-    const cand=[];
-    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-      const cx=rx+dx, cy=ry+dy;
-      if(cy>=0&&cy<s.h&&cx>=0&&cx<s.w&&s.bits[cy][cx]) cand.push([cy,cx]);
-    }
-    if(cand.length){
-      const [cy,cx]=cand[(Math.random()*cand.length)|0];
-      s.bits[cy][cx]=false;
-    }
-    return true;
-  }
-  return false;
-}
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const aabb = (ax,ay,aw,ah,bx,by,bw,bh) =>
+    !(ax+aw<bx || ax>bx+bw || ay+ah<by || ay>by+bh);
 
-/* =========================
-   弾・爆発
-========================= */
-const bullets=[], ebullets=[];
-const BW=4, BH=10;
-const booms=[];
-function boom(x,y){
-  for(let i=0;i<10;i++) booms.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,t:18});
-}
+  function resizeCanvas(){ cv.width = innerWidth; cv.height = innerHeight; }
 
-/* =========================
-   射撃
-========================= */
-function shoot(){
-  if(paused) return;
-  if(ready||clearing||over||!canShoot) return;
-  canShoot=false;
-  bullets.push({x:px-BW/2,y:playerTopY(),v:-10});
-}
-
-/* ★変更：Waveで「頻度UP」「同時弾数UP」「バースト発射」 */
-function enemyProfile(){
-  // 発射間隔：Waveが上がるほど短く（=頻度増）
-  const fireInterval = Math.max(18, Math.floor(140 - (wave-1) * 8));
-
-  // 同時に存在できる敵弾の上限：Waveごとに増える
-  const maxBullets = Math.min(12, 2 + Math.floor((wave-1) / 4));
-
-  // 1回の発射で追加する弾数（バースト）
-  const burst = Math.min(3, 1 + Math.floor((wave-1) / 6));
-
-  return { fireInterval, maxBullets, burst };
-}
-
-function enemyShoot(){
-  if(paused) return;
-  if(ready||clearing||over) return;
-
-  const prof = enemyProfile();
-  if(ebullets.length >= prof.maxBullets) return;
-
-  const alive=[];
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++) if(aliveGrid[r][c]) alive.push([r,c]);
-  if(!alive.length) return;
-
-  const [r,c]=alive[(Math.random()*alive.length)|0];
-  const {stepX,stepY}=formationMetrics();
-  const ex=fx+c*stepX, ey=fy+r*stepY;
-
-  // 弾速もWaveで少しUP（上がりすぎ防止）
-  const baseV = (isMobile ? 5 : 7);
-  const v = baseV + Math.min(4, (wave-1) * 0.2);
-
-  const shots = Math.min(prof.burst, prof.maxBullets - ebullets.length);
-  for(let k=0;k<shots;k++){
-    const spread = (k - (shots-1)/2) * (BW + 2); // -?,0,+?
-    ebullets.push({x:ex+enemyW/2-BW/2 + spread, y:ey+enemyH, v});
-  }
-}
-
-/* =========================
-   READY / CLEAR / GAMEOVER
-========================= */
-function showReady(){
-  clearTimeout(window._msgTimer);
-  if(!paused) msgEl.textContent="";
-  ready=true; safeTimer=Math.floor(wave*0.5*60);
-  window._msgTimer=setTimeout(()=>{ if(!over&&!paused) msgEl.textContent=""; ready=false; },900);
-}
-function nextWave(){
-  clearing=true; if(!paused) msgEl.textContent="CLEAR!";
-  setTimeout(()=>{
-    if(paused) return;
-    msgEl.textContent=""; wave++; waveEl.textContent=wave; clearing=false;
-    spawnEnemies(); spawnShields(); showReady();
-  },900);
-}
-function gameOver(){
-  if(over) return;
-  over=true; paused=false; pauseBtn.textContent="PAUSE";
-  msgEl.innerHTML="GAME OVER<br>Tap or Enter";
-}
-
-/* =========================
-   リセット
-========================= */
-function reset(){
-  bullets.length=0; ebullets.length=0; booms.length=0;
-  msgEl.textContent="";
-  score=0; wave=1; life=3; invincible=0; safeTimer=0; over=false; clearing=false;
-  paused=false; pauseBtn.textContent="PAUSE"; msgBeforePause="";
-  stopShooting(); stickReset();
-  scoreEl.textContent="0"; waveEl.textContent="1"; updateLifeHud();
-  px=innerWidth/2; clampPlayer();
-  spawnEnemies(); spawnShields(); showReady();
-}
-
-/* =========================
-   ロジック
-========================= */
-function updateLogic(dt){
-  if(paused) return;
-
-  for(const s of stars){
-    s.y+=s.s*(dt*0.06);
-    if(s.y>innerHeight){s.y=0;s.x=Math.random()*innerWidth;}
+  function calcU(){ if (innerWidth>=1200) return 7; if (innerWidth>=800) return 6; return 4; }
+  function isCoarse(){
+    return (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+      || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
   }
 
-  if(invincible>0) invincible--;
-  if(safeTimer>0) safeTimer--;
+  const SHIP = [
+    "000010000","000111000","000111000",
+    "011111110","111111111","111111111","111111111"
+  ];
 
-  const sp=isMobile?3:4;
-  if(!ready&&!clearing&&!over){
-    if(holdL) px-=sp;
-    if(holdR) px+=sp;
-  }
-  clampPlayer();
+  const ENEMY_TYPES = [
+    { a:["0100010","1111111","1011101","0100010"], b:["0100010","1111111","0101010","1010101"] },
+    { a:["0011100","0111110","1101011","0111110"], b:["0011100","1111111","0101010","1010101"] },
+    { a:["0110110","1111111","0101010","1010101"], b:["0011100","0111110","1101011","0111110"] },
+    { a:["0011100","1111111","1010101","0100010"], b:["0011100","0111110","0101010","1010101"] }
+  ];
 
-  const {totalW}=formationMetrics();
-  const remaining=Math.max(1,countAlive());
-  const initialCount=enemyInitialCount||remaining;
-  const ratio=remaining/initialCount;
+  const SHIELD = [
+    "00111100","01111110","11111111","11111111","11111111","11000011"
+  ];
 
-  // ★変更：Waveで移動が「少しずつ」加速（速くなりすぎ防止あり）
-  const baseInterval=260, minInterval=70;
-  let moveInterval = baseInterval*ratio + minInterval*(1-ratio);
-  const waveSpeedMul = 1 / (1 + (wave-1) * 0.04);
-  moveInterval = Math.max(45, moveInterval * waveSpeedMul);
-
-  const stepMoveX=0.55*U*(1+(wave-1)*0.02);
-  const stepDown=0.60*U;
-  const wallPauseMs=140;
-
-  if(!ready&&!clearing&&!over){
-    moveAcc+=dt;
-    if(wallPause>0){
-      const use=Math.min(wallPause,moveAcc);
-      wallPause-=use; moveAcc-=use;
-    }
-    while(moveAcc>=moveInterval){
-      moveAcc-=moveInterval;
-      const margin=10;
-      const nextFx=fx+dir*stepMoveX;
-      const nextLeft=nextFx, nextRight=nextFx+totalW;
-      if(nextRight>innerWidth-margin||nextLeft<margin){
-        dir*=-1;
-        const enemyMaxY=playerTopY()-120;
-        const stepYFix=7*U;
-        const maxFy=enemyMaxY-(rows-1)*stepYFix;
-        fy=Math.min(fy+stepDown,maxFy);
-        wallPause=wallPauseMs;
-      }else fx=nextFx;
-    }
-  }
-
-  enemyAnimTick++;
-  if(enemyAnimTick>=28){ enemyAnimTick=0; enemyFrame=1-enemyFrame; }
-
-  if(!ready&&!clearing&&!over){
-    const prof=enemyProfile();
-    enemyShootTick++;
-    if(enemyShootTick>=prof.fireInterval){
-      enemyShootTick=0; enemyShoot();
-    }
-  }
-
-  for(let i=bullets.length-1;i>=0;i--){
-    const b=bullets[i]; b.y+=b.v*(dt*0.06);
-    if(b.y<-20) bullets.splice(i,1);
-  }
-  for(let i=ebullets.length-1;i>=0;i--){
-    const b=ebullets[i]; b.y+=b.v*(dt*0.06);
-    if(b.y>innerHeight+30) ebullets.splice(i,1);
-  }
-
-  for(let i=booms.length-1;i>=0;i--){
-    const p=booms[i]; p.x+=p.vx; p.y+=p.vy; p.t--;
-    if(p.t<=0) booms.splice(i,1);
-  }
-}
-
-function detectCollisions(){
-  if(paused) return;
-
-  for(let i=bullets.length-1;i>=0;i--){
-    const b=bullets[i];
-    if(shieldHitAndDamage(b.x,b.y,BW,BH)) bullets.splice(i,1);
-  }
-  for(let i=ebullets.length-1;i>=0;i--){
-    const b=ebullets[i];
-    if(shieldHitAndDamage(b.x,b.y,BW,BH)) ebullets.splice(i,1);
-  }
-
-  const {stepX,stepY}=formationMetrics();
-  for(let i=bullets.length-1;i>=0;i--){
-    const b=bullets[i];
-    const c=Math.floor((b.x-fx)/stepX);
-    const r=Math.floor((b.y-fy)/stepY);
-    if(r>=0&&r<rows&&c>=0&&c<cols&&aliveGrid[r][c]){
-      const ex=fx+c*stepX, ey=fy+r*stepY;
-      if(aabb(b.x,b.y,BW,BH,ex,ey,enemyW,enemyH)){
-        aliveGrid[r][c]=false; bullets.splice(i,1);
-        boom(ex+enemyW/2,ey+enemyH/2);
-        score+=100; scoreEl.textContent=score;
-        if(countAlive()===0&&!over&&!clearing) nextWave();
+  function drawBitmap(lines, x, y, scale, color){
+    ctx.fillStyle = color;
+    for(let r=0;r<lines.length;r++){
+      const row = lines[r];
+      for(let c=0;c<row.length;c++){
+        if(row[c]==="1") ctx.fillRect(x+c*scale, y+r*scale, scale, scale);
       }
     }
   }
 
-  if(!over){
-    const pl=px-shipW/2, pt=playerTopY();
-    for(let i=ebullets.length-1;i>=0;i--){
-      const b=ebullets[i];
-      if(aabb(b.x,b.y,BW,BH,pl,pt,shipW,shipH)){
-        ebullets.splice(i,1);
-        if(invincible===0&&safeTimer===0){
-          life--; updateLifeHud(); boom(px,pt+shipH/2); invincible=60;
-          if(life<=0) gameOver();
+  const Game = {
+    U: calcU(),
+    isMobile: isCoarse(),
+
+    shipW:0, shipH:0, enemyW:0, enemyH:0, shieldW:0, shieldH:0,
+
+    score:0, wave:1, life:3,
+
+    ready:true, clearing:false, over:false, paused:false,
+    invincible:0, safeTimer:0,
+
+    holdL:false, holdR:false,
+    playerCanShoot:true,
+
+    playerBottomPx:70,
+    px: innerWidth/2,
+
+    stars: [],
+
+    cols:11, rows:5,
+    fx:0, fy:0, dir:1,
+    enemyInitialCount:0,
+    enemyFrame:0, enemyAnimTick:0, enemyShootTick:0,
+    moveAcc:0, wallPause:0,
+
+    hpGrid: [],
+
+    shields: [],
+    shieldBoxes: [],
+
+    bullets: [],
+    ebullets: [],
+    booms: [],
+
+    BW:4, BH:10,
+
+    colors: {
+      shield: () => "#ff3333",
+      player: () => "#44ff88",
+      row: ["#ff4d4d","#ffb84d","#ffff4d","#4dff4d","#4dd2ff"]
+    },
+
+    updateLifeHud(){
+      lifeEl.textContent = "❤️".repeat(Math.max(0, this.life));
+    },
+
+    playerTopY(){
+      return innerHeight - this.playerBottomPx - this.shipH;
+    },
+
+    clampPlayer(){
+      this.px = clamp(this.px, this.shipW/2, innerWidth - this.shipW/2);
+    },
+
+    recalcSizes(){
+      this.shipW = SHIP[0].length * this.U;
+      this.shipH = SHIP.length * this.U;
+
+      const margin = 12;
+      const minGapX = 0.90 * this.U;
+      const availW = Math.max(120, innerWidth - margin*2);
+      const maxEnemyW = (availW - (this.cols-1)*minGapX) / this.cols;
+      const scale = this.isMobile ? 0.78 : 0.86;
+      const targetW = maxEnemyW * scale;
+
+      this.enemyW = clamp(targetW, 2.6*this.U, 5.5*this.U);
+      this.enemyH = this.enemyW * (4/7);
+
+      this.shieldW = 8*this.U;
+      this.shieldH = 6*this.U;
+    },
+
+    resetStars(){
+      this.stars = [...Array(120)].map(() => ({
+        x:Math.random()*innerWidth,
+        y:Math.random()*innerHeight,
+        s:0.6+Math.random()*1.2
+      }));
+    },
+
+    formationMetrics(){
+      const minGapX = 0.90*this.U, minGapY = 1.10*this.U;
+      const stepX = this.enemyW + minGapX;
+      const stepY = this.enemyH + minGapY;
+      const totalW = this.cols*this.enemyW + (this.cols-1)*minGapX;
+      const baseY = Math.max(90, innerHeight*0.22);
+      return { stepX, stepY, totalW, baseY };
+    },
+
+    countAlive(){
+      let n=0;
+      for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++) if(this.hpGrid[r][c] > 0) n++;
+      return n;
+    },
+
+    rowKillScore(r){
+      return (this.rows - r) * 10;
+    },
+
+    enemyProfile(){
+      const fireInterval = Math.max(22, Math.floor(140 - (this.wave-1) * 8));
+      const maxBullets = Math.min(12, 2 + Math.floor((this.wave-1) / 4));
+      const burst = Math.min(3, 1 + Math.floor((this.wave-1) / 6));
+      return { fireInterval, maxBullets, burst };
+    },
+
+    spawnEnemies(){
+      this.cols = 11; this.rows = 5;
+      const hp2 = (this.wave >= 4);
+
+      this.hpGrid = Array.from({length:this.rows}, () =>
+        Array.from({length:this.cols}, () => 1)
+      );
+
+      if (hp2) {
+        for (let r=0;r<Math.min(2,this.rows);r++){
+          for (let c=0;c<this.cols;c++) this.hpGrid[r][c] = 2;
         }
       }
+
+      const { totalW, baseY } = this.formationMetrics();
+      this.fx = (innerWidth - totalW)/2;
+      this.fy = baseY;
+      this.dir = 1;
+
+      this.enemyInitialCount = this.rows*this.cols;
+      this.moveAcc = 0;
+      this.wallPause = 0;
+
+      this.enemyFrame = 0;
+      this.enemyAnimTick = 0;
+      this.enemyShootTick = 0;
+    },
+
+    buildShieldBits(){
+      const h = SHIELD.length, w = SHIELD[0].length;
+      const bits = Array.from({length:h}, (_,r)=>Array.from({length:w},(_,c)=>SHIELD[r][c]==="1"));
+      return {bits,w,h};
+    },
+
+    computeShieldLayout(){
+      const topMin = 40;
+      const gapFromPlayer = 14;
+      const defaultOffset = 80;
+
+      const playerY = this.playerTopY();
+      let y = playerY - defaultOffset;
+
+      const maxY = playerY - this.shieldH - gapFromPlayer;
+      y = Math.min(y, maxY);
+      y = Math.max(y, topMin);
+
+      if(maxY < topMin){
+        y = Math.max(0, maxY);
+      }
+
+      const xs = [0.2,0.4,0.6,0.8];
+      return xs.map(v => ({ x: innerWidth * v - this.shieldW/2, y }));
+    },
+
+    spawnShields(){
+      this.shields.length = 0;
+      const proto = this.buildShieldBits();
+      const layout = this.computeShieldLayout();
+      for (let i=0;i<layout.length;i++){
+        const {x,y} = layout[i];
+        const bits = proto.bits.map(row=>row.slice());
+        this.shields.push({x,y,bits,w:proto.w,h:proto.h});
+      }
+      this.rebuildShieldBoxes();
+    },
+
+    relayoutShields(){
+      if(!this.shields.length){
+        this.spawnShields();
+        return;
+      }
+      const layout = this.computeShieldLayout();
+      for(let i=0;i<this.shields.length && i<layout.length;i++){
+        this.shields[i].x = layout[i].x;
+        this.shields[i].y = layout[i].y;
+      }
+      this.rebuildShieldBoxes();
+    },
+
+    rebuildShieldBoxes(){
+      this.shieldBoxes = this.shields.map(s => ({
+        x:s.x, y:s.y, w:this.shieldW, h:this.shieldH,
+        ref:s
+      }));
+    },
+
+    shieldHitAndDamage(bx,by,bw,bh){
+      if (!this.shields.length) return false;
+
+      const cx = bx + bw/2;
+      let best = null;
+      let bestD = Infinity;
+      for (let i=0;i<this.shieldBoxes.length;i++){
+        const box = this.shieldBoxes[i];
+        const mid = box.x + box.w/2;
+        const d = Math.abs(cx - mid);
+        if (d < bestD) { bestD = d; best = box; }
+      }
+
+      const tryDamage = (box) => {
+        if(!aabb(bx,by,bw,bh, box.x,box.y, box.w,box.h)) return false;
+        const s = box.ref;
+
+        const rx = clamp(Math.floor(((bx+bw/2)-s.x)/this.U), 0, s.w-1);
+        const ry = clamp(Math.floor(((by+bh/2)-s.y)/this.U), 0, s.h-1);
+
+        const cand=[];
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          const cx=rx+dx, cy=ry+dy;
+          if(cy>=0&&cy<s.h&&cx>=0&&cx<s.w&&s.bits[cy][cx]) cand.push([cy,cx]);
+        }
+        if(cand.length){
+          const [cy,cx]=cand[(Math.random()*cand.length)|0];
+          s.bits[cy][cx]=false;
+        }
+        return true;
+      };
+
+      if (best && tryDamage(best)) return true;
+
+      for (let i=0;i<this.shieldBoxes.length;i++){
+        const box = this.shieldBoxes[i];
+        if (box === best) continue;
+        if (tryDamage(box)) return true;
+      }
+      return false;
+    },
+
+    boom(x,y){
+      for(let i=0;i<10;i++){
+        this.booms.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,t:18});
+      }
+    },
+
+    shootOnce(){
+      if(this.paused) return;
+      if(this.ready || this.clearing || this.over) return;
+      this.bullets.push({x:this.px - this.BW/2, y:this.playerTopY(), v:-10});
+    },
+
+    enemyShoot(){
+      if(this.paused) return;
+      if(this.ready || this.clearing || this.over) return;
+
+      const prof = this.enemyProfile();
+      if(this.ebullets.length >= prof.maxBullets) return;
+
+      const alive = [];
+      for(let r=0;r<this.rows;r++)for(let c=0;c<this.cols;c++){
+        if(this.hpGrid[r][c] > 0) alive.push([r,c]);
+      }
+      if(!alive.length) return;
+
+      const [r,c] = alive[(Math.random()*alive.length)|0];
+      const {stepX,stepY} = this.formationMetrics();
+      const ex = this.fx + c*stepX, ey = this.fy + r*stepY;
+
+      const baseV = (this.isMobile ? 5 : 7);
+      const add = Math.min(3, (this.wave-1) * 0.18);
+      const v = baseV + add;
+
+      const shots = Math.min(prof.burst, prof.maxBullets - this.ebullets.length);
+      for(let k=0;k<shots;k++){
+        const spread = (k - (shots-1)/2) * (this.BW + 2);
+        this.ebullets.push({x:ex + this.enemyW/2 - this.BW/2 + spread, y:ey + this.enemyH, v});
+      }
+    },
+
+    showReady(){
+      clearTimeout(window._msgTimer);
+      if(!this.paused) msgEl.textContent = "";
+      this.ready = true;
+      this.safeTimer = Math.floor(this.wave * 0.5 * 60);
+      window._msgTimer = setTimeout(() => {
+        if(!this.over && !this.paused) msgEl.textContent = "";
+        this.ready = false;
+      }, 900);
+    },
+
+    nextWave(){
+      this.clearing = true;
+      if(!this.paused) msgEl.textContent = "CLEAR!";
+      setTimeout(() => {
+        if(this.paused) return;
+        msgEl.textContent = "";
+        this.wave++;
+        waveEl.textContent = this.wave;
+        this.clearing = false;
+        this.spawnEnemies();
+        this.spawnShields();
+        this.showReady();
+      }, 900);
+    },
+
+    gameOver(){
+      if(this.over) return;
+      this.over = true;
+      this.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      msgEl.innerHTML = "GAME OVER<br>Tap or Enter";
+      this.holdL = false;
+      this.holdR = false;
+    },
+
+    msgBeforePause: "",
+    setPaused(next){
+      if(this.over) return;
+      this.paused = !!next;
+      pauseBtn.textContent = this.paused ? "RESUME" : "PAUSE";
+      if(this.paused){
+        this.msgBeforePause = msgEl.innerHTML;
+        msgEl.textContent = "PAUSED";
+        this.holdL = false; this.holdR = false;
+        Input.stickReset();
+        this.playerCanShoot = true;
+      }else{
+        if(this.msgBeforePause && this.msgBeforePause !== "PAUSED") msgEl.innerHTML = this.msgBeforePause;
+        else msgEl.textContent = "";
+        this.msgBeforePause = "";
+      }
+    },
+
+    togglePause(){
+      this.setPaused(!this.paused);
+    },
+
+    reset(){
+      this.bullets.length = 0;
+      this.ebullets.length = 0;
+      this.booms.length = 0;
+
+      msgEl.textContent = "";
+      this.score = 0;
+      this.wave = 1;
+      this.life = 3;
+
+      this.invincible = 0;
+      this.safeTimer = 0;
+
+      this.over = false;
+      this.clearing = false;
+
+      this.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      this.msgBeforePause = "";
+
+      this.playerCanShoot = true;
+
+      this.holdL = false; this.holdR = false;
+
+      scoreEl.textContent = "0";
+      waveEl.textContent = "1";
+      this.updateLifeHud();
+
+      this.px = innerWidth/2;
+      this.clampPlayer();
+
+      this.spawnEnemies();
+      this.spawnShields();
+      this.showReady();
+    },
+
+    update(dt){
+      if(this.paused) return;
+
+      for(const s of this.stars){
+        s.y += s.s * (dt*0.06);
+        if(s.y > innerHeight){
+          s.y = 0;
+          s.x = Math.random() * innerWidth;
+        }
+      }
+
+      if(this.invincible > 0) this.invincible--;
+      if(this.safeTimer > 0) this.safeTimer--;
+
+      const sp = this.isMobile ? 3 : 4;
+      if(!this.ready && !this.clearing && !this.over){
+        if(this.holdL) this.px -= sp;
+        if(this.holdR) this.px += sp;
+      }
+      this.clampPlayer();
+
+      const { totalW, stepX } = this.formationMetrics();
+      const remaining = Math.max(1, this.countAlive());
+      const initialCount = this.enemyInitialCount || remaining;
+      const ratio = remaining / initialCount;
+
+      // 生存している敵の左右端（列）を算出（生存クラスタで壁判定するため）
+      let minAliveC = this.cols, maxAliveC = -1;
+      for(let rr=0; rr<this.rows; rr++){
+        for(let cc=0; cc<this.cols; cc++){
+          if(this.hpGrid[rr][cc] > 0){
+            if(cc < minAliveC) minAliveC = cc;
+            if(cc > maxAliveC) maxAliveC = cc;
+          }
+        }
+      }
+      if(maxAliveC < 0){ minAliveC = 0; maxAliveC = this.cols - 1; }
+
+      /* =========================================================
+         ★ULTRA FAST：序盤から速く、減るほどさらに加速、最後の1体は激速
+      ========================================================= */
+      const baseInterval = 150;
+      const minInterval  = 10;
+
+      const t = 1 - ratio;
+      const curve = Math.pow(t, 1.55);
+
+      let moveInterval = baseInterval * (1 - curve) + minInterval * curve;
+
+      const waveSpeedMul = 1 / (1 + (this.wave - 1) * 0.06);
+      moveInterval *= waveSpeedMul;
+
+      if (remaining === 1) moveInterval = Math.min(moveInterval, 6);
+      moveInterval = Math.max(6, moveInterval);
+
+      const stepMoveX = 1.35*this.U*(1+(this.wave-1)*0.03);
+
+      const stepDown  = 0.60*this.U;
+      const wallPauseMs = 70;
+
+      if(!this.ready && !this.clearing && !this.over){
+        this.moveAcc += dt;
+        if(this.wallPause > 0){
+          const use = Math.min(this.wallPause, this.moveAcc);
+          this.wallPause -= use;
+          this.moveAcc -= use;
+        }
+        while(this.moveAcc >= moveInterval){
+          this.moveAcc -= moveInterval;
+
+          const margin = 10;
+          const nextFx = this.fx + this.dir * stepMoveX;
+
+          // 生存クラスタ（生き残っている敵の左右端）で壁判定する
+          const nextAliveLeft  = nextFx + minAliveC * stepX;
+          const nextAliveRight = nextFx + maxAliveC * stepX + this.enemyW;
+
+          if (nextAliveRight > innerWidth - margin) {
+            // 右壁に到達 → 生存クラスタの右端が壁ぴったりになるように位置補正して反転
+            const overflow = nextAliveRight - (innerWidth - margin);
+            this.fx = nextFx - overflow;
+            this.dir = -1;
+
+            const enemyMaxY = this.playerTopY() - 120;
+            const stepYFix = 7 * this.U;
+            const maxFy = enemyMaxY - (this.rows - 1) * stepYFix;
+            this.fy = Math.min(this.fy + stepDown, maxFy);
+
+            this.wallPause = wallPauseMs;
+
+            // 爆速時に同フレーム内で多重反転しないようにする
+            this.moveAcc = 0;
+            break;
+
+          } else if (nextAliveLeft < margin) {
+            // 左壁に到達 → 生存クラスタの左端が壁ぴったりになるように位置補正して反転
+            const overflow = margin - nextAliveLeft;
+            this.fx = nextFx + overflow;
+            this.dir = 1;
+
+            const enemyMaxY = this.playerTopY() - 120;
+            const stepYFix = 7 * this.U;
+            const maxFy = enemyMaxY - (this.rows - 1) * stepYFix;
+            this.fy = Math.min(this.fy + stepDown, maxFy);
+
+            this.wallPause = wallPauseMs;
+
+            // 爆速時に同フレーム内で多重反転しないようにする
+            this.moveAcc = 0;
+            break;
+
+          } else {
+            // 壁に当たらない通常移動
+            this.fx = nextFx;
+          }
+        }
+      }
+
+      this.enemyAnimTick++;
+      if(this.enemyAnimTick >= 28){
+        this.enemyAnimTick = 0;
+        this.enemyFrame = 1 - this.enemyFrame;
+      }
+
+      if(!this.ready && !this.clearing && !this.over){
+        const prof = this.enemyProfile();
+        this.enemyShootTick++;
+        if(this.enemyShootTick >= prof.fireInterval){
+          this.enemyShootTick = 0;
+          this.enemyShoot();
+        }
+      }
+
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const b=this.bullets[i];
+        b.y += b.v*(dt*0.06);
+        if(b.y < -20) this.bullets.splice(i,1);
+      }
+      for(let i=this.ebullets.length-1;i>=0;i--){
+        const b=this.ebullets[i];
+        b.y += b.v*(dt*0.06);
+        if(b.y > innerHeight + 30) this.ebullets.splice(i,1);
+      }
+
+      for(let i=this.booms.length-1;i>=0;i--){
+        const p=this.booms[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.t--;
+        if(p.t <= 0) this.booms.splice(i,1);
+      }
+    },
+
+    detectCollisions(){
+      if(this.paused) return;
+
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const b=this.bullets[i];
+        if(this.shieldHitAndDamage(b.x,b.y,this.BW,this.BH)) this.bullets.splice(i,1);
+      }
+      for(let i=this.ebullets.length-1;i>=0;i--){
+        const b=this.ebullets[i];
+        if(this.shieldHitAndDamage(b.x,b.y,this.BW,this.BH)) this.ebullets.splice(i,1);
+      }
+
+      const {stepX,stepY} = this.formationMetrics();
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const b=this.bullets[i];
+        const c=Math.floor((b.x - this.fx)/stepX);
+        const r=Math.floor((b.y - this.fy)/stepY);
+        if(r>=0 && r<this.rows && c>=0 && c<this.cols && this.hpGrid[r][c] > 0){
+          const ex=this.fx + c*stepX;
+          const ey=this.fy + r*stepY;
+          if(aabb(b.x,b.y,this.BW,this.BH, ex,ey, this.enemyW,this.enemyH)){
+            this.bullets.splice(i,1);
+
+            this.hpGrid[r][c]--;
+            this.boom(ex+this.enemyW/2, ey+this.enemyH/2);
+
+            if(this.hpGrid[r][c] <= 0){
+              this.score += this.rowKillScore(r);
+              scoreEl.textContent = this.score;
+              if(this.countAlive()===0 && !this.over && !this.clearing) this.nextWave();
+            }
+          }
+        }
+      }
+
+      if(!this.over){
+        const pl = this.px - this.shipW/2;
+        const pt = this.playerTopY();
+        for(let i=this.ebullets.length-1;i>=0;i--){
+          const b=this.ebullets[i];
+          if(aabb(b.x,b.y,this.BW,this.BH, pl,pt, this.shipW,this.shipH)){
+            this.ebullets.splice(i,1);
+            if(this.invincible===0 && this.safeTimer===0){
+              this.life--;
+              this.updateLifeHud();
+              this.boom(this.px, pt+this.shipH/2);
+              this.invincible = 60;
+              if(this.life<=0) this.gameOver();
+            }
+          }
+        }
+      }
+    },
+
+    render(){
+      ctx.fillStyle="#000";
+      ctx.fillRect(0,0,innerWidth,innerHeight);
+
+      ctx.fillStyle="#fff";
+      for(const s of this.stars) ctx.fillRect(s.x,s.y,2,2);
+
+      const sc = this.colors.shield();
+      for(const s of this.shields){
+        ctx.fillStyle = sc;
+        for(let r=0;r<s.h;r++){
+          for(let c=0;c<s.w;c++){
+            if(s.bits[r][c]) ctx.fillRect(s.x + c*this.U, s.y + r*this.U, this.U, this.U);
+          }
+        }
+      }
+
+      const {stepX,stepY} = this.formationMetrics();
+      for(let r=0;r<this.rows;r++){
+        for(let c=0;c<this.cols;c++){
+          if(this.hpGrid[r][c] <= 0) continue;
+          const type = ENEMY_TYPES[r % ENEMY_TYPES.length];
+          const bmp = this.enemyFrame ? type.b : type.a;
+          const color = this.colors.row[r % this.colors.row.length];
+          const x = this.fx + c*stepX;
+          const y = this.fy + r*stepY;
+          const scale = Math.max(1, Math.round(this.enemyW/7));
+          drawBitmap(bmp, x, y, scale, color);
+
+          if(this.hpGrid[r][c] >= 2){
+            ctx.fillStyle="rgba(255,255,255,.65)";
+            ctx.fillRect(x, y-3, Math.max(10, this.enemyW*0.30), 2);
+          }
+        }
+      }
+
+      drawBitmap(SHIP, this.px - this.shipW/2, this.playerTopY(), this.U, this.colors.player());
+
+      ctx.fillStyle="cyan";
+      for(const b of this.bullets) ctx.fillRect(b.x,b.y,this.BW,this.BH);
+
+      ctx.fillStyle="orange";
+      for(const b of this.ebullets) ctx.fillRect(b.x,b.y,this.BW,this.BH);
+
+      ctx.fillStyle="orange";
+      for(const p of this.booms) ctx.fillRect(p.x,p.y,4,4);
+
+      if(this.paused){
+        ctx.fillStyle="rgba(0,0,0,.25)";
+        ctx.fillRect(0,0,innerWidth,innerHeight);
+      }
     }
-  }
-}
+  };
 
-function render(){
-  ctx.fillStyle="#000"; ctx.fillRect(0,0,innerWidth,innerHeight);
+  const Input = {
+    stick: { baseCx:0, baseCy:0, radius:52, dx:0 },
+    stickTouchActive:false,
 
-  ctx.fillStyle="#fff";
-  for(const s of stars) ctx.fillRect(s.x,s.y,2,2);
+    updateStickGeometry(){
+      const r = stickBase.getBoundingClientRect();
+      this.stick.baseCx = r.left + r.width/2;
+      this.stick.baseCy = r.top  + r.height/2;
+    },
 
-  const sc=shieldColor();
-  for(const s of shields){
-    ctx.fillStyle=sc;
-    for(let r=0;r<s.h;r++)for(let c=0;c<s.w;c++)
-      if(s.bits[r][c]) ctx.fillRect(s.x+c*U,s.y+r*U,U,U);
-  }
+    setKnobPos(x,y){
+      const w = stickKnob.offsetWidth || 74;
+      const h = stickKnob.offsetHeight || 74;
+      stickKnob.style.left = (x - w/2) + "px";
+      stickKnob.style.top  = (y - h/2) + "px";
+    },
 
-  const {stepX,stepY}=formationMetrics();
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    if(!aliveGrid[r][c]) continue;
-    const type=ENEMY_TYPES[r%ENEMY_TYPES.length];
-    const bmp=enemyFrame?type.b:type.a;
-    const color=ROW_COLORS[r%ROW_COLORS.length];
-    const x=fx+c*stepX, y=fy+r*stepY;
-    const scale=Math.max(1,Math.round(enemyW/7));
-    drawBitmap(bmp,x,y,scale,color);
-  }
+    applyStick(){
+      const dead = 0.18;
+      if(Math.abs(this.stick.dx) < dead){
+        Game.holdL = false; Game.holdR = false;
+        return;
+      }
+      if(this.stick.dx < 0){
+        Game.holdL = true; Game.holdR = false;
+      }else{
+        Game.holdR = true; Game.holdL = false;
+      }
+    },
 
-  drawBitmap(SHIP,px-shipW/2,playerTopY(),U,playerColor());
+    stickReset(){
+      this.stickTouchActive = false;
+      this.stick.dx = 0;
+      Game.holdL = false;
+      Game.holdR = false;
+      this.updateStickGeometry();
+      this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
+    },
 
-  ctx.fillStyle="cyan"; for(const b of bullets) ctx.fillRect(b.x,b.y,BW,BH);
-  ctx.fillStyle="orange"; for(const b of ebullets) ctx.fillRect(b.x,b.y,BW,BH);
-  ctx.fillStyle="orange"; for(const p of booms) ctx.fillRect(p.x,p.y,4,4);
+    stickMoveTouch(t){
+      const vx = t.clientX - this.stick.baseCx;
+      const max = this.stick.radius;
+      const cl = Math.min(Math.abs(vx), max);
+      const dx = vx < 0 ? -cl : cl;
 
-  if(paused){
-    ctx.fillStyle="rgba(0,0,0,.25)";
-    ctx.fillRect(0,0,innerWidth,innerHeight);
-  }
-}
+      this.setKnobPos(this.stick.baseCx + dx, this.stick.baseCy);
+      this.stick.dx = clamp(vx / max, -1, 1);
+      this.applyStick();
+    },
 
-/* =========================
-   PC入力（A発射のみ / Space無効）
-========================= */
-addEventListener("keydown",(e)=>{
-  if(e.key==="p"||e.key==="P"||e.key==="Escape"){ togglePause(); return; }
-  if(paused) return;
-  if(over && e.key==="Enter") reset();
+    updateControlsVisibility(){
+      controls.style.display = Game.isMobile ? "block" : "none";
+      this.updateStickGeometry();
+      this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
+    }
+  };
 
-  if(e.code==="ArrowLeft") holdL=true;
-  if(e.code==="ArrowRight") holdR=true;
+  pauseBtn.addEventListener("click", (e)=>{
+    e.preventDefault();
+    Game.togglePause();
+  }, {passive:false});
 
-  if(e.code==="KeyA") shoot();
-});
-addEventListener("keyup",(e)=>{
-  if(paused) return;
-  if(e.code==="ArrowLeft") holdL=false;
-  if(e.code==="ArrowRight") holdR=false;
-  if(e.code==="KeyA") canShoot=true;
-});
+  addEventListener("keydown",(e)=>{
+    if(e.key==="p"||e.key==="P"||e.key==="Escape"){
+      Game.togglePause();
+      return;
+    }
+    if(Game.paused) return;
 
-/* =========================
-   モバイル：アナログスティック＋SHOT（touch専用）
-========================= */
-const controls=document.getElementById("controls");
-const stickBase=document.getElementById("stickBase");
-const stickKnob=document.getElementById("stickKnob");
-const shootBtn=document.getElementById("shootBtn");
+    if(Game.over && e.key==="Enter"){
+      Game.reset();
+      return;
+    }
 
-let stick={baseCx:0,baseCy:0,radius:52,dx:0};
-let stickTouchActive=false;
+    if(e.code==="ArrowLeft") Game.holdL=true;
+    if(e.code==="ArrowRight") Game.holdR=true;
 
-function setKnobPos(x,y){
-  const w=stickKnob.offsetWidth||74, h=stickKnob.offsetHeight||74;
-  stickKnob.style.left=(x-w/2)+"px";
-  stickKnob.style.top=(y-h/2)+"px";
-}
-function updateStickGeometry(){
-  const r=stickBase.getBoundingClientRect();
-  stick.baseCx=r.left+r.width/2;
-  stick.baseCy=r.top+r.height/2;
-}
-function applyStick(){
-  const dead=0.18;
-  if(Math.abs(stick.dx)<dead){ holdL=false; holdR=false; return; }
-  if(stick.dx<0){ holdL=true; holdR=false; }
-  else{ holdR=true; holdL=false; }
-}
-function stickReset(){
-  stickTouchActive=false; stick.dx=0;
-  holdL=false; holdR=false;
-  updateStickGeometry();
-  setKnobPos(stick.baseCx, stick.baseCy);
-}
-
-function stickMoveTouch(t){
-  const vx = t.clientX - stick.baseCx;
-  const len = Math.abs(vx);
-  const max = stick.radius;
-  const cl = Math.min(len, max);
-  const dx = vx < 0 ? -cl : cl;
-
-  setKnobPos(stick.baseCx + dx, stick.baseCy);
-
-  stick.dx = clamp(vx / max, -1, 1);
-  applyStick();
-}
-
-stickBase.addEventListener("touchstart",(e)=>{
-  if(!isMobile||paused||over) return;
-  stickTouchActive=true;
-  updateStickGeometry();
-  if(e.touches && e.touches[0]) stickMoveTouch(e.touches[0]);
-  e.preventDefault(); e.stopPropagation();
-},{passive:false});
-
-stickKnob.addEventListener("touchstart",(e)=>{
-  if(!isMobile||paused||over) return;
-  stickTouchActive=true;
-  updateStickGeometry();
-  if(e.touches && e.touches[0]) stickMoveTouch(e.touches[0]);
-  e.preventDefault(); e.stopPropagation();
-},{passive:false});
-
-window.addEventListener("touchmove",(e)=>{
-  if(!stickTouchActive||paused) return;
-  if(e.touches && e.touches[0]) stickMoveTouch(e.touches[0]);
-  e.preventDefault(); e.stopPropagation();
-},{passive:false});
-
-function endStickTouch(e){
-  if(!stickTouchActive) return;
-  stickReset();
-  e.preventDefault(); e.stopPropagation();
-}
-window.addEventListener("touchend", endStickTouch, {passive:false});
-window.addEventListener("touchcancel", endStickTouch, {passive:false});
-
-/* SHOT連射 */
-let shootInterval=null;
-function startShooting(){
-  if(paused) return;
-  if(over){ reset(); return; }
-  canShoot=true; shoot();
-  stopShooting();
-  shootInterval=setInterval(()=>{
-    if(paused||over) return;
-    canShoot=true; shoot();
-  },120);
-}
-function stopShooting(){
-  if(shootInterval){ clearInterval(shootInterval); shootInterval=null; }
-  canShoot=true;
-}
-
-shootBtn.addEventListener("touchstart",(e)=>{
-  if(!isMobile||paused) return;
-  shootBtn.blur();
-  if(document.activeElement) document.activeElement.blur();
-  startShooting();
-  e.preventDefault(); e.stopPropagation();
-},{passive:false});
-
-function endShootTouch(e){
-  stopShooting();
-  e.preventDefault(); e.stopPropagation();
-}
-shootBtn.addEventListener("touchend", endShootTouch, {passive:false});
-shootBtn.addEventListener("touchcancel", endShootTouch, {passive:false});
-
-function updateControlsVisibility(){
-  controls.style.display = isMobile ? 'block' : 'none';
-  updateStickGeometry();
-  setKnobPos(stick.baseCx, stick.baseCy);
-}
-updateControlsVisibility();
-
-/* =========================
-   resize（毎回relayoutShields）
-========================= */
-let resizeQueued=false;
-addEventListener("resize",()=>{
-  if(resizeQueued) return;
-  resizeQueued=true;
-  requestAnimationFrame(()=>{
-    resizeQueued=false;
-    resizeCanvas();
-    const oldIsMobile=isMobile, oldCols=cols, oldRows=rows;
-    U=calcU();
-    isMobile = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-    recalcSizes();
-
-    const bpChanged=(oldIsMobile!==isMobile)||(oldCols!==getCols())||(oldRows!==getRows());
-    resetStars(); clampPlayer(); updateControlsVisibility();
-
-    if(bpChanged){ reset(); return; }
-
-    relayoutShields();
-
-    const {totalW,baseY}=formationMetrics();
-    fx=(innerWidth-totalW)/2; fy=baseY;
-    if(paused) stickReset();
+    if(e.code==="KeyA" && Game.playerCanShoot){
+      Game.playerCanShoot = false;
+      Game.shootOnce();
+    }
   });
-});
 
-/* =========================
-   ループ
-========================= */
-function loop(){
-  const now=performance.now();
-  const dt=Math.min(34, now-(loop._last||now));
-  loop._last=now;
-  updateLogic(dt);
-  detectCollisions();
-  render();
-  requestAnimationFrame(loop);
-}
+  addEventListener("keyup",(e)=>{
+    if(Game.paused) return;
+    if(e.code==="ArrowLeft") Game.holdL=false;
+    if(e.code==="ArrowRight") Game.holdR=false;
+    if(e.code==="KeyA") Game.playerCanShoot = true;
+  });
 
-/* =========================
-   START
-========================= */
-reset();
-loop();
+  ["touchstart","touchmove","touchend"].forEach(t=>{
+    document.addEventListener(t, e=>{
+      if(e.target && e.target.id === "shootBtn") e.preventDefault();
+    }, {passive:false});
+  });
+
+  const onStickStart = (e) => {
+    if(!Game.isMobile || Game.paused || Game.over) return;
+    Input.stickTouchActive = true;
+    Input.updateStickGeometry();
+    if(e.touches && e.touches[0]) Input.stickMoveTouch(e.touches[0]);
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  stickBase.addEventListener("touchstart", onStickStart, {passive:false});
+  stickKnob.addEventListener("touchstart", onStickStart, {passive:false});
+
+  window.addEventListener("touchmove",(e)=>{
+    if(!Input.stickTouchActive || Game.paused) return;
+    if(e.touches && e.touches[0]) Input.stickMoveTouch(e.touches[0]);
+    e.preventDefault();
+    e.stopPropagation();
+  }, {passive:false});
+
+  const endStickTouch = (e) => {
+    if(!Input.stickTouchActive) return;
+    Input.stickReset();
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  window.addEventListener("touchend", endStickTouch, {passive:false});
+  window.addEventListener("touchcancel", endStickTouch, {passive:false});
+
+  const shootOnceOnTouch = (e) => {
+    if(!Game.isMobile || Game.paused) return;
+    if(Game.over){ Game.reset(); return; }
+
+    shootBtn.blur();
+    if(document.activeElement) document.activeElement.blur();
+
+    Game.shootOnce();
+
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  shootBtn.addEventListener("touchstart", shootOnceOnTouch, {passive:false});
+  shootBtn.addEventListener("touchend", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+  shootBtn.addEventListener("touchcancel", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+
+  let resizeQueued=false;
+  addEventListener("resize",()=>{
+    if(resizeQueued) return;
+    resizeQueued=true;
+    requestAnimationFrame(()=>{
+      resizeQueued=false;
+
+      resizeCanvas();
+
+      const oldIsMobile = Game.isMobile;
+      Game.U = calcU();
+      Game.isMobile = isCoarse();
+      const bpChanged = (oldIsMobile !== Game.isMobile);
+
+      Game.recalcSizes();
+      Game.resetStars();
+      Game.clampPlayer();
+      Input.updateControlsVisibility();
+
+      if(bpChanged){
+        Game.reset();
+        return;
+      }
+
+      Game.relayoutShields();
+
+      const {totalW, baseY} = Game.formationMetrics();
+      Game.fx = (innerWidth - totalW)/2;
+      Game.fy = baseY;
+
+      if(Game.paused) Input.stickReset();
+    });
+  });
+
+  function loop(){
+    const now = performance.now();
+    const dt = Math.min(34, now - (loop._last || now));
+    loop._last = now;
+
+    Game.update(dt);
+    Game.detectCollisions();
+    Game.render();
+
+    requestAnimationFrame(loop);
+  }
+
+  resizeCanvas();
+  Game.recalcSizes();
+  Game.resetStars();
+  Input.updateControlsVisibility();
+  Input.stickReset();
+  Game.updateLifeHud();
+  Game.reset();
+  loop();
+
+})();
 </script>
 </body>
 </html>
