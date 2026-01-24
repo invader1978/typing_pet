@@ -208,6 +208,10 @@
     shields: [],
     shieldBoxes: [],
 
+    // ★敵がシールドに触れている間の「少しずつ削る」用
+    shieldContactTick: 0,
+    shieldContactEvery: 3, // この回数に1回だけ削る（小さいほど早く削れる）
+
     bullets: [],
     ebullets: [],
     booms: [],
@@ -412,6 +416,22 @@
       return false;
     },
 
+    // ★敵がシールドに接触した時：ランダムに少しずつ削る
+    damageShieldRandom(shield, hits){
+      hits = Math.max(0, hits|0);
+      if(!hits) return;
+      // なるべく「残っているブロック」を消す
+      let attempts = hits * 10;
+      while(hits > 0 && attempts-- > 0){
+        const r = (Math.random() * shield.h) | 0;
+        const c = (Math.random() * shield.w) | 0;
+        if(shield.bits[r][c]){
+          shield.bits[r][c] = false;
+          hits--;
+        }
+      }
+    },
+
     boom(x,y){
       for(let i=0;i<10;i++){
         this.booms.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,t:18});
@@ -533,6 +553,8 @@
       this.bullets.length = 0;
       this.ebullets.length = 0;
       this.booms.length = 0;
+
+      this.shieldContactTick = 0;
 
       msgEl.textContent = "";
       this.score = 0;
@@ -659,13 +681,11 @@
           const nextAliveRight = nextFx + maxAliveC * stepX + this.enemyW;
 
           if (nextAliveRight > innerWidth - margin) {
-            // 右壁に到達 → 生存クラスタの右端が壁ぴったりになるように位置補正して反転
             const overflow = nextAliveRight - (innerWidth - margin);
             this.fx = nextFx - overflow;
             this.dir = -1;
-            // ★体当たりOK：下降制限をなくしてどんどん降りる（ただし当たった瞬間に止める）
             this.fy += stepDown;
-            // 自機にめり込む前に「ぴったり接触」で止めて即ゲームオーバー
+
             const playerTop = this.playerTopY();
             const lowestBottom = this.fy + maxAliveR * stepY + this.enemyH;
             if (lowestBottom >= playerTop) {
@@ -675,19 +695,15 @@
             }
 
             this.wallPause = wallPauseMs;
-
-            // 爆速時に同フレーム内で多重反転しないようにする
             this.moveAcc = 0;
             break;
 
           } else if (nextAliveLeft < margin) {
-            // 左壁に到達 → 生存クラスタの左端が壁ぴったりになるように位置補正して反転
             const overflow = margin - nextAliveLeft;
             this.fx = nextFx + overflow;
             this.dir = 1;
-            // ★体当たりOK：下降制限をなくしてどんどん降りる（ただし当たった瞬間に止める）
             this.fy += stepDown;
-            // 自機にめり込む前に「ぴったり接触」で止めて即ゲームオーバー
+
             const playerTop = this.playerTopY();
             const lowestBottom = this.fy + maxAliveR * stepY + this.enemyH;
             if (lowestBottom >= playerTop) {
@@ -697,13 +713,10 @@
             }
 
             this.wallPause = wallPauseMs;
-
-            // 爆速時に同フレーム内で多重反転しないようにする
             this.moveAcc = 0;
             break;
 
           } else {
-            // 壁に当たらない通常移動
             this.fx = nextFx;
           }
         }
@@ -748,7 +761,37 @@
       if(this.paused) return;
       if(this.hitStop > 0) return;
 
-      
+      // ★敵がシールドに触れている間は「少しずつ削る」（複数敵なら削れが増える）
+      //   - 毎フレームだと削れ過ぎるので shieldContactEvery 回に1回だけ処理
+      this.shieldContactTick++;
+      if(this.shieldContactTick % this.shieldContactEvery === 0 && this.shieldBoxes.length){
+        const {stepX, stepY} = this.formationMetrics();
+        for(const box of this.shieldBoxes){
+          let contacts = 0;
+
+          // 生存している敵だけで接触数をカウント
+          for(let r=0;r<this.rows;r++){
+            for(let c=0;c<this.cols;c++){
+              if(this.hpGrid[r][c] <= 0) continue;
+              const ex = this.fx + c*stepX;
+              const ey = this.fy + r*stepY;
+              if(aabb(ex, ey, this.enemyW, this.enemyH, box.x, box.y, box.w, box.h)){
+                contacts++;
+                if(contacts >= 8) break;
+              }
+            }
+            if(contacts >= 8) break;
+          }
+
+          if(contacts > 0){
+            // 1体あたりの削れ量（お好みで調整：2〜6くらいが見やすい）
+            const perEnemy = 3;
+            const hits = Math.min(40, contacts * perEnemy);
+            this.damageShieldRandom(box.ref, hits);
+          }
+        }
+      }
+
       // ★敵の体当たり（高速でも通り抜けない：スイープAABB）
       if(!this.over && !this.ready && !this.clearing){
         const shipX = this.px - this.shipW/2;
@@ -760,7 +803,6 @@
         const fx0 = (typeof this.prevFx === "number") ? this.prevFx : this.fx;
         const fy0 = (typeof this.prevFy === "number") ? this.prevFy : this.fy;
 
-        // 生存している最下段（めり込みゼロ補正用）
         let maxAliveR = -1;
         for(let rr=0; rr<this.rows; rr++){
           for(let cc=0; cc<this.cols; cc++){
@@ -783,14 +825,13 @@
             const sh = Math.max(eyA + this.enemyH, eyB + this.enemyH) - sy;
 
             if(aabb(sx, sy, sw, sh, shipX, shipY, shipW, shipH)){
-              // 潜り込みを見せない：最下段の底を自機の上端にピタ合わせ
               if(maxAliveR >= 0){
                 const enemyBottom = this.fy + maxAliveR*stepY + this.enemyH;
                 const over = enemyBottom - shipY;
                 if(over > 0) this.fy -= over;
               }
 
-              const HIT_MS = 260; // 体当たりが見えるおすすめ値（0.26秒）
+              const HIT_MS = 260;
               this.hitStop = Math.max(this.hitStop, HIT_MS);
 
               if(!this._pendingGameOver){
@@ -807,7 +848,7 @@
         }
       }
 
-for(let i=this.bullets.length-1;i>=0;i--){
+      for(let i=this.bullets.length-1;i>=0;i--){
         const b=this.bullets[i];
         if(this.shieldHitAndDamage(b.x,b.y,this.BW,this.BH)) this.bullets.splice(i,1);
       }
@@ -815,6 +856,7 @@ for(let i=this.bullets.length-1;i>=0;i--){
         const b=this.ebullets[i];
         if(this.shieldHitAndDamage(b.x,b.y,this.BW,this.BH)) this.ebullets.splice(i,1);
       }
+
       // ★敵が自機に体当たりしたら即ゲームオーバー
       if(!this.over){
         const pl = this.px - this.shipW/2;
@@ -828,7 +870,6 @@ for(let i=this.bullets.length-1;i>=0;i--){
             const ex = this.fx + c*stepX;
             const ey = this.fy + r*stepY;
             if(aabb(ex,ey,this.enemyW,this.enemyH, pl,pt,pw,ph)){
-              // 見た目：めり込ませず「ぴったり接触」で止める
               this.fy = pt - (r * stepY + this.enemyH);
               this.triggerRamming(this.fy);
               return;
@@ -836,7 +877,6 @@ for(let i=this.bullets.length-1;i>=0;i--){
           }
         }
       }
-
 
       const {stepX,stepY} = this.formationMetrics();
       for(let i=this.bullets.length-1;i>=0;i--){
