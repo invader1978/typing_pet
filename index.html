@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8.3 (Input & Mobile & Perf)</title>
+<title>Invader Stable v8.4 (Tap Restart)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -115,6 +115,9 @@
   "use strict";
 
   /* =========================================================
+     v8.4
+     - ★GAME OVER時：画面タップ/クリックで即リスタート
+
      v8.3
      - ③入力処理整理：playerCanShoot廃止（クールダウン一本化）
      - ④パフォーマンス：星/シールド削りの割当削減、描画スケールキャッシュ
@@ -794,8 +797,13 @@ resetStars(){
       s.paused = false;
       pauseBtn.textContent = "PAUSE";
       msgEl.innerHTML = "GAME OVER<br>Tap or Enter";
+      // allow tapping/clicking the overlay to restart
+      msgEl.style.pointerEvents = "auto";
+      msgEl.style.cursor = "pointer";
       s.holdL = false;
       s.holdR = false;
+      // stop mobile stick drift
+      if (typeof Input !== "undefined") Input.stickReset();
     }
 
     nextWave(){
@@ -1051,6 +1059,9 @@ resetStars(){
       s.shieldContactTick = 0;
 
       msgEl.textContent = "";
+      // message overlay should not block gameplay input
+      msgEl.style.pointerEvents = "none";
+      msgEl.style.cursor = "";
       s.score = 0;
       s.wave = 1;
       s.life = 3;
@@ -1384,6 +1395,26 @@ resetStars(){
     e.preventDefault();
     logic.togglePause();
   }, {passive:false});
+
+  // ===== GAME OVER: tap/click anywhere to restart =====
+  const restartFromTap = (e) => {
+    if (!state.over || state.paused) return;
+
+    const t = e.target;
+    // don't interfere with UI buttons; they already have handlers
+    if (t === pauseBtn || t === shootBtn || t === stickBase || t === stickKnob) return;
+
+    logic.reset();
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Canvas click/tap
+  cv.addEventListener("pointerdown", restartFromTap, { passive:false });
+  // Overlay click/tap (when GAME OVER)
+  msgEl.addEventListener("pointerdown", restartFromTap, { passive:false });
+  // Fallback for some iOS browsers
+  cv.addEventListener("touchstart", restartFromTap, { passive:false });
 
   addEventListener("keydown",(e)=>{
     if(e.key==="p"||e.key==="P"||e.key==="Escape"){
