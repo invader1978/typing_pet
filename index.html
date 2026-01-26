@@ -1420,7 +1420,9 @@ resetStars(){
 
     applyMobileControlSizes(){
       if(!state.isMobile) return;
-      const m = Math.min(state.w, state.h);
+      const sw = (typeof screen!=="undefined" && screen.width) ? screen.width : state.w;
+      const sh = (typeof screen!=="undefined" && screen.height) ? screen.height : state.h;
+      const m = Math.min(sw, sh);
       const clampInt = (v,a,b)=>Math.max(a, Math.min(b, v|0));
 
       const margin = clampInt(Math.round(m*0.035), 16, 28);
@@ -1719,6 +1721,14 @@ resetStars(){
   }
   // boot
   resizeCanvas();
+  // initialize sizing + mobile controls before first interaction (prevents "first touch" snap)
+  state.U = calcU();
+  state.isMobile = isCoarse();
+  state.recalcSizes();
+  state.resetStars();
+  state.clampPlayer();
+  Input.updateControlsVisibility();
+
   rebuildSystems();
   logic.reset();
   loop();
