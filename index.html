@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8.4.2 (Stabilized)</title>
+<title>Invader Stable v8.4.2a (Stabilized - Clean)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -149,6 +149,18 @@
 <script>
 (() => {
   "use strict";
+
+  // ===== SANITY CHECK (stabilization) =====
+  // If the file is corrupted, fail fast with a visible message instead of a black screen.
+  const failHard = (msg) => {
+    const el = document.getElementById("msg");
+    if(el){
+      el.style.pointerEvents = "none";
+      el.textContent = msg;
+    }
+    throw new Error(msg);
+  };
+
 
   /* =========================================================
      v8.4
