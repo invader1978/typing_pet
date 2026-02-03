@@ -3,17 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Typing Pet - Travel Only + 10k (Typewriter Only)</title>
+  <title>Typing Pet</title>
   <style>
     :root{
       --bg:#0b1020;
       --text:#eaf0ff;
       --muted:#a8b3d6;
-      --accent:#7bf0ff;
-      --accent2:#b5ff7b;
-      --danger:#ff6b8b;
-      --ok:#b5ff7b;
-      --bad:#ff6b8b;
       --line:rgba(255,255,255,.10);
       --shadow: 0 18px 60px rgba(0,0,0,.45);
       --radius: 18px;
@@ -95,7 +90,6 @@
       padding:12px 12px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;background:rgba(0,0,0,.16);
       line-height:1.8;font-size:14px;
     }
-
     .promptLine{
       font-family:var(--mono);
       font-size:15px;
@@ -110,23 +104,13 @@
       transition:background .08s ease, color .08s ease, box-shadow .08s ease;
     }
     .todo{ color: rgba(234,240,255,.55); }
-    .ok{
-      color: rgba(181,255,123,.95);
-      text-shadow: 0 0 18px rgba(181,255,123,.18);
-    }
-    .bad{
-      color: rgba(255,107,139,.95);
-      background: rgba(255,107,139,.10);
-      box-shadow: 0 0 0 1px rgba(255,107,139,.22) inset;
-    }
+    .ok{ color: rgba(181,255,123,.95); text-shadow: 0 0 18px rgba(181,255,123,.18); }
+    .bad{ color: rgba(255,107,139,.95); background: rgba(255,107,139,.10); box-shadow: 0 0 0 1px rgba(255,107,139,.22) inset; }
     .caret{ position:relative; }
     .caret::after{
       content:"";
-      position:absolute;
-      left:-1px;
-      bottom:-2px;
-      width:2px;
-      height:1.25em;
+      position:absolute; left:-1px; bottom:-2px;
+      width:2px; height:1.25em;
       background: rgba(123,240,255,.75);
       border-radius:2px;
       box-shadow: 0 0 18px rgba(123,240,255,.35);
@@ -140,7 +124,7 @@
       border:1px solid rgba(255,255,255,.14);
       background:rgba(10,16,34,.45);color:var(--text);outline:none;font-family:var(--mono);
       font-size:14px;letter-spacing:.2px;
-      ime-mode: disabled; /* 効かない場合あり */
+      ime-mode: disabled;
     }
     input[type="text"]:focus{border-color:rgba(123,240,255,.45);box-shadow:0 0 0 3px rgba(123,240,255,.12);}
     .mini{color:var(--muted);font-size:12px;line-height:1.5;}
@@ -182,7 +166,7 @@
   <div class="wrap">
     <header>
       <div>
-        <h1>Typing Pet 🧫 謎の生物を育てる <span style="opacity:.7;font-size:.7em">(Travel + 10k / Typewriter)</span></h1>
+        <h1>Typing Pet 🧫 謎の生物を育てる <span style="opacity:.7;font-size:.7em">(Travel + 10k / Loud Typewriter)</span></h1>
         <p class="sub">
           旅行予約・変更・キャンセルで使える英語を練習。<span class="kbd">Enter</span>で判定。<span class="kbd">Esc</span>で入力リセット。
         </p>
@@ -191,12 +175,11 @@
         <div class="pill"><span class="dot"></span><span id="statusPill">idle</span></div>
         <div class="pill">Theme: travel</div>
         <div class="pill">Prompts: 10,000 (no-repeat)</div>
-        <div class="pill">Sound: typewriter only</div>
+        <div class="pill">Sound: louder</div>
       </div>
     </header>
 
     <div class="grid">
-      <!-- LEFT: PET -->
       <section class="card">
         <h2>
           <span>生物観察</span>
@@ -221,7 +204,6 @@
         </div>
       </section>
 
-      <!-- RIGHT: GAME -->
       <section class="card">
         <h2>
           <span>育成タイピング</span>
@@ -230,10 +212,10 @@
           </span>
         </h2>
         <div class="body typingBox">
-          <div class="prompt" id="promptBox">
+          <div class="prompt">
             <div id="promptText" class="promptLine"></div>
             <div class="mini" style="margin-top:8px">
-              ※ ブラウザからIMEを強制的に半角英数へ切替はできません。日本語入力が有効な場合は英数に切り替えてください（検知して注意表示します）。
+              ※ ブラウザからIMEを強制的に半角英数へ切替はできません。日本語入力が有効な場合は英数に切り替えてください。
             </div>
             <div class="mini" style="margin-top:6px">
               ※ iPhone等では最初の操作が必要です。音が出ないときは入力欄を一度タップしてからタイプしてください。
@@ -241,15 +223,10 @@
           </div>
 
           <div class="inputRow">
-            <input id="typeInput"
-                   type="text"
-                   autocomplete="off"
-                   autocapitalize="none"
-                   autocorrect="off"
-                   spellcheck="false"
-                   inputmode="latin"
-                   lang="en"
-                   placeholder="上の英文をそのまま入力して Enter…" />
+            <input id="typeInput" type="text"
+              autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"
+              inputmode="latin" lang="en"
+              placeholder="上の英文をそのまま入力して Enter…" />
             <button class="btn primary" id="btnSubmit">Enter判定</button>
           </div>
 
@@ -282,14 +259,14 @@
           </div>
 
           <div class="mini">
-            IME変換中は挙動が暴れやすいので、変換中（composition中）は色更新とタイプ音を抑制します。
+            IME変換中（composition中）は色更新とタイプ音を抑制します。
           </div>
         </div>
       </section>
     </div>
 
     <footer>
-      旅行予約の文章を中心に10,000パターン（重複なし）。入力ごとに上の英文が1文字ずつ色変化。タイプライター音はWeb Audioで生成。
+      旅行予約の文章を中心に10,000パターン（重複なし）。入力ごとに上の英文が1文字ずつ色変化。タイプライター音はWeb Audioで生成（音量UP）。
     </footer>
   </div>
 
@@ -297,7 +274,6 @@
 
 <script>
 (() => {
-  // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const now = () => Date.now();
@@ -323,7 +299,7 @@
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[c]));
 
-  // ---------- Typewriter Sound (Web Audio only) ----------
+  // ===== Typewriter Sound (LOUD DEFAULT) =====
   const TypeSound = (() => {
     let ctx = null;
     let out = null;
@@ -333,7 +309,7 @@
       if (!ctx) {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         out = ctx.createGain();
-        out.gain.value = 0.35; // volume
+        out.gain.value = 0.85; // ★ここがデフォルト音量（大きめ）
         out.connect(ctx.destination);
       }
     }
@@ -343,15 +319,11 @@
         ensure();
         if (ctx.state === "suspended") await ctx.resume();
         unlocked = true;
-
-        // iOSでの“初回解放”を確実にするための超小クリック
         click({ a: 0.00001, t: 0.01, band: 1500, q: 8 });
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
 
-    function click({ a = 0.05, t = 0.016, band = 1900, q = 9 } = {}) {
+    function click({ a = 0.09, t = 0.016, band = 1900, q = 9 } = {}) {
       if (!unlocked) return;
       ensure();
       const sr = ctx.sampleRate;
@@ -389,23 +361,23 @@
       if (!unlocked) return;
 
       if (kind === "backspace") {
-        click({ a: 0.06, t: 0.020, band: 900, q: 6 });
-        setTimeout(() => click({ a: 0.03, t: 0.014, band: 700, q: 6 }), 10);
+        click({ a: 0.12, t: 0.020, band: 900, q: 6 });
+        setTimeout(() => click({ a: 0.07, t: 0.014, band: 700, q: 6 }), 10);
         return;
       }
       if (kind === "space") {
-        click({ a: 0.05, t: 0.016, band: 1200, q: 7 });
+        click({ a: 0.10, t: 0.016, band: 1200, q: 7 });
         return;
       }
       // normal
-      click({ a: 0.05, t: 0.014, band: 2000, q: 10 });
-      if (Math.random() < 0.35) setTimeout(() => click({ a: 0.025, t: 0.011, band: 2600, q: 10 }), 8);
+      click({ a: 0.10, t: 0.014, band: 2000, q: 10 });
+      if (Math.random() < 0.35) setTimeout(() => click({ a: 0.06, t: 0.011, band: 2600, q: 10 }), 8);
     }
 
     return { unlock, type };
   })();
 
-  // ---------- Prompt system (10,000, no repeat until loop) ----------
+  // ----- Prompts (10k, travel only) -----
   const PROMPT_COUNT = 10000;
 
   function makeOrder(n, seed){
@@ -455,108 +427,13 @@
     return out;
   }
 
-  // ---------- Travel prompts (reservation-focused, EN only) ----------
   const TRAVEL = {
-    OPEN: [
-      "hello,",
-      "hi there,",
-      "good morning,",
-      "good afternoon,",
-      "excuse me,",
-      "i have a question.",
-      "i need help.",
-      "could you help me,",
-      "i would like to check something.",
-      "i am calling about a reservation.",
-      "i am emailing about my booking.",
-      "i need to update my booking."
-    ],
-    INTENT: [
-      "i would like to book",
-      "i would like to reserve",
-      "i need to change",
-      "i need to modify",
-      "i need to cancel",
-      "i would like to confirm",
-      "i would like to rebook",
-      "i need to extend",
-      "i need to shorten",
-      "i need to add",
-      "i need to remove",
-      "i need to correct"
-    ],
-    WHAT: [
-      "a hotel room",
-      "a flight",
-      "a train ticket",
-      "a rental car",
-      "an airport transfer",
-      "a tour",
-      "a reservation",
-      "my booking",
-      "my itinerary",
-      "my seat",
-      "my check-in date",
-      "my guest name"
-    ],
-    DETAILS: [
-      "for one person",
-      "for two people",
-      "for three people",
-      "for two adults and one child",
-      "with breakfast included",
-      "with a non-smoking room",
-      "with a double bed",
-      "with a late check-out",
-      "with free cancellation",
-      "with checked baggage",
-      "with a window seat if possible",
-      "with a child seat",
-      "with an automatic transmission",
-      "with insurance included",
-      "with an ocean view if available",
-      "and i have a confirmation number"
-    ],
-    DATE: [
-      "from march 3 to march 5",
-      "from march 12 to march 14",
-      "from april 1 to april 4",
-      "from april 10 to april 12",
-      "from may 2 to may 6",
-      "from may 18 to may 20",
-      "on june 7",
-      "on june 21",
-      "on july 3",
-      "on july 19",
-      "on august 9",
-      "on september 2",
-      "next monday",
-      "next friday",
-      "this weekend",
-      "tomorrow",
-      "today",
-      "in the evening",
-      "in the morning",
-      "around 3 pm"
-    ],
-    EXTRA: [
-      "could you confirm the total price",
-      "could you confirm the cancellation policy",
-      "could you send me the updated confirmation",
-      "could you tell me what documents i need",
-      "could you check availability",
-      "could you recommend the best option",
-      "could you confirm the check-in time",
-      "could you confirm the baggage allowance",
-      "could you help me change the dates",
-      "could you help me change the name on the reservation",
-      "could you help me add another guest",
-      "could you help me change the payment method",
-      "could you confirm the pickup location",
-      "could you confirm the drop-off time",
-      "could you help me choose seats",
-      "could you tell me if there is an extra fee"
-    ]
+    OPEN: ["hello,","hi there,","good morning,","good afternoon,","excuse me,","i have a question.","i need help.","could you help me,","i would like to check something.","i am calling about a reservation.","i am emailing about my booking.","i need to update my booking."],
+    INTENT: ["i would like to book","i would like to reserve","i need to change","i need to modify","i need to cancel","i would like to confirm","i would like to rebook","i need to extend","i need to shorten","i need to add","i need to remove","i need to correct"],
+    WHAT: ["a hotel room","a flight","a train ticket","a rental car","an airport transfer","a tour","a reservation","my booking","my itinerary","my seat","my check-in date","my guest name"],
+    DETAILS: ["for one person","for two people","for three people","for two adults and one child","with breakfast included","with a non-smoking room","with a double bed","with a late check-out","with free cancellation","with checked baggage","with a window seat if possible","with a child seat","with an automatic transmission","with insurance included","with an ocean view if available","and i have a confirmation number"],
+    DATE: ["from march 3 to march 5","from march 12 to march 14","from april 1 to april 4","from april 10 to april 12","from may 2 to may 6","from may 18 to may 20","on june 7","on june 21","on july 3","on july 19","on august 9","on september 2","next monday","next friday","this weekend","tomorrow","today","in the evening","in the morning","around 3 pm"],
+    EXTRA: ["could you confirm the total price","could you confirm the cancellation policy","could you send me the updated confirmation","could you tell me what documents i need","could you check availability","could you recommend the best option","could you confirm the check-in time","could you confirm the baggage allowance","could you help me change the dates","could you help me change the name on the reservation","could you help me add another guest","could you help me change the payment method","could you confirm the pickup location","could you confirm the drop-off time","could you help me choose seats","could you tell me if there is an extra fee"]
   };
 
   function promptByIndex(i){
@@ -572,26 +449,17 @@
     return `${open} ${core} ${extra}?`;
   }
 
-  // ---------- State ----------
-  const STORAGE_KEY = "typing_pet_state_travel_only_typewriter_v1";
-
+  // ----- State -----
+  const STORAGE_KEY = "typing_pet_state_travel_only_typewriter_loud_v1";
   const defaultState = () => ({
     name: generateName(),
     createdAt: now(),
     lastSeen: now(),
-    lv: 1,
-    xp: 0,
-    stage: 0,
-    energy: 0.72,
-    mood: 0.55,
-    glow: 0.45,
-    spikes: 0.25,
-    wobble: 0.35,
-    friendliness: 0.55,
+    lv: 1, xp: 0, stage: 0,
+    energy: 0.72, mood: 0.55, glow: 0.45, spikes: 0.25, wobble: 0.35, friendliness: 0.55,
     trait: "balanced",
     combo: 0,
-    wpmNow: null,
-    accNow: null,
+    wpmNow: null, accNow: null,
     seed: (Math.random()*1e9)|0,
     log: [],
     prompts: {},
@@ -603,24 +471,10 @@
     const b = ["blob","mite","ling","core","seed","goo","puff","wisp","morph","bud","nug","sprout","gazer","drift","node"];
     return pick(a) + pick(b);
   }
+  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return null; const s = JSON.parse(raw); return (s && typeof s==="object") ? s : null; }catch(e){ return null; } }
+  function saveState(){ try{ state.lastSeen = now(); localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return null;
-      const s = JSON.parse(raw);
-      if(!s || typeof s !== "object") return null;
-      return s;
-    }catch(e){ return null; }
-  }
-  function saveState(){
-    try{
-      state.lastSeen = now();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }catch(e){}
-  }
-
-  // ---------- Elements ----------
+  // ----- Elements -----
   const cv = $("#cv");
   const ctx = cv.getContext("2d");
   const toastEl = $("#toast");
@@ -631,16 +485,13 @@
     petMood: $("#petMood"),
     petLv: $("#petLv"),
     energyBar: $("#energyBar"),
-
     promptText: $("#promptText"),
     typeInput: $("#typeInput"),
-
     btnSubmit: $("#btnSubmit"),
     btnNewPrompt: $("#btnNewPrompt"),
     btnSnapshot: $("#btnSnapshot"),
     btnShare: $("#btnShare"),
     btnReset: $("#btnReset"),
-
     wpmNow: $("#wpmNow"),
     accNow: $("#accNow"),
     comboNow: $("#comboNow"),
@@ -648,15 +499,13 @@
     log: $("#log"),
   };
 
-  // ---------- Toast ----------
+  // ----- Toast & Log -----
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toast._t);
     toast._t = setTimeout(()=>toastEl.classList.remove("show"), 1100);
   }
-
-  // ---------- Logs ----------
   function pushLog(kind, msg){
     const item = { t: now(), kind, msg };
     state.log = state.log || [];
@@ -675,16 +524,9 @@
     });
   }
 
-  // ---------- Pet naming ----------
-  function stageName(stage){
-    return ["芽生え","ぷるぷる","発光体","多脚体","未知体"][clamp(stage,0,4)];
-  }
-  function moodName(m){
-    if(m < 0.25) return "calm";
-    if(m < 0.55) return "curious";
-    if(m < 0.80) return "wild";
-    return "feral";
-  }
+  // ----- Pet helpers -----
+  function stageName(stage){ return ["芽生え","ぷるぷる","発光体","多脚体","未知体"][clamp(stage,0,4)]; }
+  function moodName(m){ if(m < 0.25) return "calm"; if(m < 0.55) return "curious"; if(m < 0.80) return "wild"; return "feral"; }
   function traitFrom(s){
     const { friendliness, glow, spikes, wobble } = s;
     if (friendliness > 0.68 && spikes < 0.45) return "gentle";
@@ -694,13 +536,11 @@
     return "balanced";
   }
 
-  // ---------- Init state ----------
+  // ----- Init -----
   let state = loadState() || defaultState();
   (function migrate(){
     const d = defaultState();
-    for(const k in d){
-      if(state[k] === undefined) state[k] = d[k];
-    }
+    for(const k in d){ if(state[k] === undefined) state[k] = d[k]; }
     state.log = state.log || [];
     state.prompts = state.prompts || {};
     state.energy = clamp(state.energy ?? 0.7, 0, 1);
@@ -711,7 +551,6 @@
     state.friendliness = clamp(state.friendliness ?? 0.55, 0, 1);
   })();
 
-  // passive recovery while away
   const awayMs = now() - (state.lastSeen || now());
   if (awayMs > 10_000) {
     const mins = awayMs / 60000;
@@ -721,31 +560,19 @@
     state.log = state.log.slice(0,60);
   }
 
-  // ---------- Typing session ----------
-  let session = {
-    startedAt: null,
-    lastKeyAt: null,
-    typed: "",
-    target: "",
-    idle: true
-  };
-
-  // IME composition tracking（変換中の暴れ防止）
+  // ----- Typing session -----
+  let session = { startedAt: null, lastKeyAt: null, typed: "", target: "", idle: true };
   let composing = false;
-
-  // last key kind for sound
   let lastKeyKind = "char";
 
-  // ---------- Prompt rendering (per-character) ----------
+  // ----- Prompt rendering -----
   let promptChars = [];
-
   function renderPromptChars(text){
     el.promptText.innerHTML = "";
     promptChars = [];
     for(let i=0;i<text.length;i++){
       const span = document.createElement("span");
       span.className = "ch todo";
-      span.dataset.i = String(i);
       const ch = text[i];
       span.textContent = (ch === " ") ? "\u00A0" : ch;
       el.promptText.appendChild(span);
@@ -753,7 +580,6 @@
     }
     updatePromptHighlight("");
   }
-
   function updatePromptHighlight(typed){
     const target = session.target || "";
     const tLen = target.length;
@@ -764,41 +590,36 @@
       const sp = promptChars[i];
       sp.classList.remove("ok","bad","todo","caret");
       if(i < uLen){
-        const ok = typed[i] === target[i];
-        sp.classList.add(ok ? "ok" : "bad");
+        sp.classList.add(typed[i] === target[i] ? "ok" : "bad");
       }else{
         sp.classList.add("todo");
       }
     }
-
     const caretPos = clamp(uLen, 0, Math.max(0, tLen-1));
-    if(promptChars[caretPos]){
-      promptChars[caretPos].classList.add("caret");
-    }
+    if(promptChars[caretPos]) promptChars[caretPos].classList.add("caret");
   }
-
   function shakePrompt(){
     el.promptText.classList.remove("shake");
     void el.promptText.offsetWidth;
     el.promptText.classList.add("shake");
   }
 
-  // ---------- UI ----------
+  // ----- UI -----
   function updateHeaderUI(){
-    el.petName.textContent = state.name;
-    el.petStage.textContent = stageName(state.stage);
-    el.petMood.textContent = moodName(state.mood);
-    el.petLv.textContent = state.lv;
-    el.energyBar.style.width = `${Math.round(state.energy*100)}%`;
+    $("#petName").textContent = state.name;
+    $("#petStage").textContent = stageName(state.stage);
+    $("#petMood").textContent = moodName(state.mood);
+    $("#petLv").textContent = state.lv;
+    $("#energyBar").style.width = `${Math.round(state.energy*100)}%`;
 
-    el.wpmNow.textContent = state.wpmNow == null ? "-" : String(state.wpmNow);
-    el.accNow.textContent = state.accNow == null ? "-" : String(Math.round(state.accNow*100));
-    el.comboNow.textContent = String(state.combo || 0);
+    $("#wpmNow").textContent = state.wpmNow == null ? "-" : String(state.wpmNow);
+    $("#accNow").textContent = state.accNow == null ? "-" : String(Math.round(state.accNow*100));
+    $("#comboNow").textContent = String(state.combo || 0);
 
     state.trait = traitFrom(state);
-    el.traitNow.textContent = state.trait;
+    $("#traitNow").textContent = state.trait;
 
-    el.statusPill.textContent = session.idle ? "idle" : "awake";
+    $("#statusPill").textContent = session.idle ? "idle" : "awake";
   }
 
   function setPrompt(index=null){
@@ -818,14 +639,12 @@
     saveState();
   }
 
-  // ---------- Typing metrics ----------
+  // ----- Metrics -----
   function computeAccuracy(typed, target){
     const n = Math.max(typed.length, target.length);
     if(n === 0) return 1;
     let same = 0;
-    for(let i=0;i<n;i++){
-      if(typed[i] === target[i]) same++;
-    }
+    for(let i=0;i<n;i++){ if(typed[i] === target[i]) same++; }
     return same / n;
   }
   function computeWPM(typed, durationMs){
@@ -848,7 +667,6 @@
     const xpGain = baseXp + comboBonus;
 
     const energyCost = 0.04 + (1-a)*0.07 + w*0.02;
-    const energyDelta = -energyCost;
 
     const moodDelta = (w*0.10) - (a*0.08);
     const glowDelta = (quality*0.08) - (Math.abs(w-a)*0.03);
@@ -858,23 +676,23 @@
 
     let kind = "info";
     let msg = "";
-    if(acc >= 0.95 && wpm >= 50){
-      kind = "good"; msg = "きれいに打てた！ 生物が嬉しそうに光った。";
-    }else if(acc < 0.75){
-      kind = "bad"; msg = "ミスが多い…生物がトゲトゲしてきた。";
-    }else if(wpm < 25){
-      kind = "info"; msg = "ゆっくりでもOK。生物は落ち着いて観察している。";
-    }else{
-      kind = "good"; msg = "いい調子。少し成長した。";
-    }
-    return {xpGain, energyDelta, moodDelta, glowDelta, spikeDelta, wobbleDelta, friendlyDelta, msg, kind};
+    if(acc >= 0.95 && wpm >= 50){ kind = "good"; msg = "きれいに打てた！ 生物が嬉しそうに光った。"; }
+    else if(acc < 0.75){ kind = "bad"; msg = "ミスが多い…生物がトゲトゲしてきた。"; }
+    else if(wpm < 25){ kind = "info"; msg = "ゆっくりでもOK。生物は落ち着いて観察している。"; }
+    else { kind = "good"; msg = "いい調子。少し成長した。"; }
+
+    return {
+      xpGain,
+      energyDelta: -energyCost,
+      moodDelta, glowDelta, spikeDelta, wobbleDelta, friendlyDelta,
+      msg, kind
+    };
   }
 
   function applyReward(wpm, acc){
     const r = rewardFrom(wpm, acc);
     const pass = (acc >= 0.86);
-    if(pass) state.combo = (state.combo||0) + 1;
-    else state.combo = 0;
+    state.combo = pass ? (state.combo||0) + 1 : 0;
 
     state.xp += r.xpGain;
     state.energy = clamp(state.energy + r.energyDelta, 0, 1);
@@ -903,14 +721,11 @@
       }
     }
 
-    if(state.energy <= 0.02){
-      pushLog("bad", "疲れ切った…少し休ませてあげよう（放置で回復）。");
-    }
-
+    if(state.energy <= 0.02) pushLog("bad", "疲れ切った…少し休ませてあげよう（放置で回復）。");
     saveState();
   }
 
-  // ---------- IME composition events ----------
+  // ----- IME events -----
   el.typeInput.addEventListener("compositionstart", () => {
     composing = true;
     toast("IME変換中… 英数入力に切り替えてください");
@@ -921,7 +736,7 @@
     updatePromptHighlight(session.typed);
   });
 
-  // ---------- Input ----------
+  // ----- Input events -----
   function startSessionIfNeeded(){
     if(session.startedAt == null){
       session.startedAt = now();
@@ -931,14 +746,9 @@
   }
 
   el.typeInput.addEventListener("keydown", (e) => {
-    // iOS対策：最初の操作でAudioContextを解放
     TypeSound.unlock();
 
-    if(e.key === "Enter"){
-      e.preventDefault();
-      submit();
-      return;
-    }
+    if(e.key === "Enter"){ e.preventDefault(); submit(); return; }
     if(e.key === "Escape"){
       e.preventDefault();
       el.typeInput.value = "";
@@ -951,7 +761,6 @@
     startSessionIfNeeded();
     session.lastKeyAt = now();
 
-    // IME中は音を鳴らす判定を作らない
     if(e.isComposing || composing) return;
 
     if(e.key === "Backspace") lastKeyKind = "backspace";
@@ -966,7 +775,6 @@
 
     session.typed = el.typeInput.value;
 
-    // IME変換中は更新・音を抑制
     if(e.isComposing || composing) return;
 
     updatePromptHighlight(session.typed);
@@ -974,14 +782,12 @@
     const target = session.target || "";
     if(session.typed.length > target.length) shakePrompt();
 
-    // typewriter sound
     const inputType = e.inputType || "";
     if(inputType.startsWith("delete")) TypeSound.type("backspace");
     else if(lastKeyKind === "space") TypeSound.type("space");
     else if(lastKeyKind === "char") TypeSound.type("char");
   });
 
-  // “保険”のアンロック（タップ/キーで一度だけ）
   window.addEventListener("pointerdown", () => TypeSound.unlock(), { once:true, passive:true });
   window.addEventListener("touchstart", () => TypeSound.unlock(), { once:true, passive:true });
   window.addEventListener("keydown", () => TypeSound.unlock(), { once:true });
@@ -1000,26 +806,16 @@
 
     applyReward(wpm, acc);
 
-    const verdict = (acc >= 0.86) ? "OK" : "MISS";
-    toast(`${verdict}  Acc ${Math.round(acc*100)}%  WPM ${Math.round(wpm)}`);
-
+    toast(`${(acc >= 0.86) ? "OK" : "MISS"}  Acc ${Math.round(acc*100)}%  WPM ${Math.round(wpm)}`);
     setPrompt(null);
 
     if(state.energy < 0.18) pushLog("bad", "ちょっと疲れてる…休憩しながら育てよう。");
     else if(state.combo >= 5) pushLog("good", `コンボ ${state.combo}！ どんどん学習している。`);
   }
 
-  // ---------- Buttons ----------
-  el.btnNewPrompt.addEventListener("click", () => {
-    setPrompt(null);
-    pushLog("info", "お題を変えた。新しい旅の予定だ。");
-    TypeSound.unlock();
-  });
-
-  el.btnSubmit.addEventListener("click", () => {
-    TypeSound.unlock();
-    submit();
-  });
+  // ----- Buttons -----
+  el.btnNewPrompt.addEventListener("click", () => { setPrompt(null); pushLog("info", "お題を変えた。新しい旅の予定だ。"); TypeSound.unlock(); });
+  el.btnSubmit.addEventListener("click", () => { TypeSound.unlock(); submit(); });
 
   el.btnSnapshot.addEventListener("click", () => {
     const a = document.createElement("a");
@@ -1032,16 +828,21 @@
   });
 
   el.btnShare.addEventListener("click", async () => {
-    const text = makeShareText();
+    const text = [
+      `Typing Pet (travel booking)`,
+      `Name: ${state.name}`,
+      `Lv: ${state.lv} / Stage: ${stageName(state.stage)} / Trait: ${state.trait}`,
+      `Energy: ${Math.round(state.energy*100)}% / Mood: ${moodName(state.mood)}`,
+      `Last: Acc ${state.accNow==null ? "-" : Math.round(state.accNow*100)+"%"} , WPM ${state.wpmNow==null ? "-" : state.wpmNow}`,
+      `#TypingPet`
+    ].join("\n");
     try{
       await navigator.clipboard.writeText(text);
       toast("コピーしました");
     }catch(e){
       const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
       document.body.removeChild(ta);
       toast("コピーしました");
     }
@@ -1062,40 +863,22 @@
     TypeSound.unlock();
   });
 
-  function makeShareText(){
-    const acc = state.accNow==null ? "-" : `${Math.round(state.accNow*100)}%`;
-    const wpm = state.wpmNow==null ? "-" : `${state.wpmNow}`;
-    return [
-      `Typing Pet (travel booking)`,
-      `Name: ${state.name}`,
-      `Lv: ${state.lv} / Stage: ${stageName(state.stage)} / Trait: ${state.trait}`,
-      `Energy: ${Math.round(state.energy*100)}% / Mood: ${moodName(state.mood)}`,
-      `Last: Acc ${acc}, WPM ${wpm}`,
-      `#TypingPet`
-    ].join("\n");
-  }
-
-  // idle detection / passive recovery
+  // ----- Idle recovery -----
   setInterval(() => {
     const idleFor = session.lastKeyAt ? (now() - session.lastKeyAt) : 999999;
     const wasIdle = session.idle;
     session.idle = idleFor > 7000;
-    if(session.idle && !wasIdle){
-      pushLog("info", "生物は休憩モードに入った。");
-    }
+    if(session.idle && !wasIdle) pushLog("info", "生物は休憩モードに入った。");
     if(session.idle){
-      const rec = 0.006;
-      state.energy = clamp(state.energy + rec, 0, 1);
+      state.energy = clamp(state.energy + 0.006, 0, 1);
       state.mood = clamp(state.mood - 0.004, 0, 1);
       state.glow = clamp(state.glow + 0.002, 0, 1);
       saveState();
-      updateHeaderUI();
-    }else{
-      updateHeaderUI();
     }
+    updateHeaderUI();
   }, 1200);
 
-  // ---------- Drawing (Canvas) ----------
+  // ----- Canvas drawing -----
   let t0 = now();
   let stars = null;
 
@@ -1251,6 +1034,8 @@
 
     const floorY = H*0.76;
     const glow = state.glow;
+
+    // floor glow
     ctx.save();
     ctx.globalAlpha = 0.35 + glow*0.35;
     const grd = ctx.createRadialGradient(W*0.5, floorY, 10, W*0.5, floorY, W*0.55);
@@ -1283,6 +1068,7 @@
     const hue2 = 105 + glow*20 - mood*10;
     const alpha = 0.82;
 
+    // shadow
     ctx.save();
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -1308,8 +1094,7 @@
       const r = R * (1 + wave + spike);
       const x = Math.cos(rad)*r;
       const y = Math.sin(rad)*r*0.92;
-      if(i===0) bodyPath.moveTo(x,y);
-      else bodyPath.lineTo(x,y);
+      if(i===0) bodyPath.moveTo(x,y); else bodyPath.lineTo(x,y);
     }
     bodyPath.closePath();
 
@@ -1327,6 +1112,7 @@
     ctx.stroke(bodyPath);
     ctx.restore();
 
+    // eyes & mouth
     const eyeY = -R*0.15 + bob*0.08;
     const eyeSpread = lerp(R*0.28, R*0.42, stage/4);
     const eyeSize = lerp(7, 14, clamp((state.lv-1)/18,0,1)) * (0.85 + energy*0.4);
@@ -1351,12 +1137,12 @@
     else if(stage >= 1) drawBubbles(R, t, glow);
 
     drawSparkles(R, t, glow);
-    ctx.restore();
 
+    ctx.restore();
     requestAnimationFrame(draw);
   }
 
-  // ---------- Boot ----------
+  // ----- Boot -----
   function boot(){
     renderLog();
     updateHeaderUI();
@@ -1366,7 +1152,6 @@
     saveState();
   }
 
-  // Start
   boot();
 })();
 </script>
