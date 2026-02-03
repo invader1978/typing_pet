@@ -3,17 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Typing Pet - 謎の生物を育てる (Audio)</title>
+  <title>Typing Pet - Travel Only + 10k (Typewriter Loud)</title>
   <style>
     :root{
       --bg:#0b1020;
-      --panel:#101a33;
-      --panel2:#0e1730;
       --text:#eaf0ff;
       --muted:#a8b3d6;
-      --accent:#7bf0ff;
-      --accent2:#b5ff7b;
-      --danger:#ff6b8b;
       --line:rgba(255,255,255,.10);
       --shadow: 0 18px 60px rgba(0,0,0,.45);
       --radius: 18px;
@@ -38,31 +33,99 @@
     h1{margin:0;font-size:clamp(20px,2.6vw,32px);letter-spacing:.3px;line-height:1.15;}
     .sub{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.45;}
     .pillRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .pill{padding:8px 10px;border:1px solid var(--line);background:rgba(16,26,51,.55);border-radius:999px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.20);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);user-select:none;}
-    .dot{width:10px;height:10px;border-radius:50%;background:rgba(123,240,255,.65);box-shadow:0 0 0 3px rgba(123,240,255,.12),0 0 24px rgba(123,240,255,.45);}
+    .pill{
+      padding:8px 10px;border:1px solid var(--line);
+      background:rgba(16,26,51,.55);border-radius:999px;font-size:12px;color:var(--muted);
+      display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.20);
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);user-select:none;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background:rgba(123,240,255,.65);
+      box-shadow:0 0 0 3px rgba(123,240,255,.12),0 0 24px rgba(123,240,255,.45);
+    }
     .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;}
     @media (max-width:980px){.grid{grid-template-columns:1fr}.pillRow{justify-content:flex-start}}
-    .card{border:1px solid var(--line);background:linear-gradient(180deg, rgba(16,26,51,.85), rgba(14,23,48,.70));border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;position:relative;}
-    .card h2{margin:0;padding:14px 16px;font-size:14px;color:var(--muted);letter-spacing:.4px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .card{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(16,26,51,.85), rgba(14,23,48,.70));
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;position:relative;
+    }
+    .card h2{
+      margin:0;padding:14px 16px;font-size:14px;color:var(--muted);letter-spacing:.4px;
+      border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+    }
     .card h2 .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;}
-    .btn{appearance:none;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,34,.40);color:var(--text);border-radius:12px;padding:8px 10px;font-size:12px;cursor:pointer;transition:transform .08s ease, background .2s ease, border-color .2s ease;user-select:none;}
+    .btn{
+      appearance:none;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,34,.40);
+      color:var(--text);border-radius:12px;padding:8px 10px;font-size:12px;cursor:pointer;
+      transition:transform .08s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+    }
     .btn:hover{background:rgba(10,16,34,.60);border-color:rgba(123,240,255,.35)}
     .btn:active{transform:translateY(1px)}
     .btn.primary{border-color:rgba(123,240,255,.35);background:rgba(123,240,255,.10);}
     .btn.danger{border-color:rgba(255,107,139,.35);background:rgba(255,107,139,.10);}
     .body{padding:14px 16px 16px;}
-    canvas{width:100%;height:380px;display:block;background:radial-gradient(900px 400px at 50% 20%, rgba(123,240,255,.10), transparent 65%), radial-gradient(600px 300px at 20% 80%, rgba(181,255,123,.08), transparent 60%), linear-gradient(180deg, rgba(7,10,20,.55), rgba(7,10,20,.20));border-bottom:1px solid var(--line);}
+    canvas{
+      width:100%;height:380px;display:block;
+      background:
+        radial-gradient(900px 400px at 50% 20%, rgba(123,240,255,.10), transparent 65%),
+        radial-gradient(600px 300px at 20% 80%, rgba(181,255,123,.08), transparent 60%),
+        linear-gradient(180deg, rgba(7,10,20,.55), rgba(7,10,20,.20));
+      border-bottom:1px solid var(--line);
+    }
     .petFooter{display:flex;gap:12px;flex-wrap:wrap;padding:12px 16px 16px;align-items:center;justify-content:space-between;}
     .statLine{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px;}
     .tag{padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(0,0,0,.18);color:var(--muted);font-size:12px;}
     .tag b{color:var(--text);font-weight:600}
     .meter{height:9px;width:180px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);}
     .meter>i{display:block;height:100%;width:30%;background:linear-gradient(90deg, rgba(123,240,255,.75), rgba(181,255,123,.70));box-shadow:0 0 24px rgba(123,240,255,.35);}
+
     .typingBox{display:flex;flex-direction:column;gap:12px;}
-    .prompt{padding:12px 12px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;background:rgba(0,0,0,.16);line-height:1.6;font-size:14px;}
-    .prompt .jp{color:var(--muted);font-size:12px;margin-top:6px}
+    .prompt{
+      padding:12px 12px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;background:rgba(0,0,0,.16);
+      line-height:1.8;font-size:14px;
+    }
+    .promptLine{
+      font-family:var(--mono);
+      font-size:15px;
+      letter-spacing:.2px;
+      word-break:break-word;
+      white-space:pre-wrap;
+    }
+    .ch{
+      display:inline-block;
+      padding:0 0.5px;
+      border-radius:6px;
+      transition:background .08s ease, color .08s ease, box-shadow .08s ease;
+    }
+    .todo{ color: rgba(234,240,255,.55); }
+    .ok{ color: rgba(181,255,123,.95); text-shadow: 0 0 18px rgba(181,255,123,.18); }
+    .bad{ color: rgba(255,107,139,.95); background: rgba(255,107,139,.10); box-shadow: 0 0 0 1px rgba(255,107,139,.22) inset; }
+    .caret{ position:relative; }
+    .caret::after{
+      content:"";
+      position:absolute; left:-1px; bottom:-2px;
+      width:2px; height:1.25em;
+      background: rgba(123,240,255,.75);
+      border-radius:2px;
+      box-shadow: 0 0 18px rgba(123,240,255,.35);
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
     .inputRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-    input[type="text"]{flex:1;min-width:220px;padding:12px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,34,.45);color:var(--text);outline:none;font-family:var(--mono);font-size:14px;letter-spacing:.2px;}
+    input[type="text"]{
+      flex:1;min-width:220px;padding:12px 12px;border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(10,16,34,.45);color:var(--text);outline:none;font-family:var(--mono);
+      font-size:14px;letter-spacing:.2px;
+      ime-mode: disabled;
+    }
     input[type="text"]:focus{border-color:rgba(123,240,255,.45);box-shadow:0 0 0 3px rgba(123,240,255,.12);}
     .mini{color:var(--muted);font-size:12px;line-height:1.5;}
     .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -77,42 +140,46 @@
     .logItem.bad{border-color:rgba(255,107,139,.22)}
     .logItem.info{border-color:rgba(123,240,255,.20)}
     footer{margin-top:14px;color:rgba(255,255,255,.52);font-size:12px;padding:12px 4px;}
-    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(10,16,34,.88);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:10px 14px;color:var(--text);font-size:12px;box-shadow:0 20px 70px rgba(0,0,0,.50);opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:9999;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);white-space:nowrap;}
+
+    .toast{
+      position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+      background:rgba(10,16,34,.88);border:1px solid rgba(255,255,255,.16);
+      border-radius:999px;padding:10px 14px;color:var(--text);font-size:12px;
+      box-shadow:0 20px 70px rgba(0,0,0,.50);
+      opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
+      z-index:9999;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);white-space:nowrap;
+    }
     .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
     .kbd{font-family:var(--mono);border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px;font-size:12px;color:var(--text);}
 
-    /* Audio controls */
-    .audioRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:10px}
-    .toggle{
-      display:flex;align-items:center;gap:8px;
-      padding:8px 10px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.16);border-radius:14px;
-      user-select:none;
+    .shake{animation: shake .18s linear 1;}
+    @keyframes shake{
+      0%{transform:translateX(0)}
+      25%{transform:translateX(-2px)}
+      50%{transform:translateX(2px)}
+      75%{transform:translateX(-1px)}
+      100%{transform:translateX(0)}
     }
-    .toggle input{transform: translateY(1px);}
-    .slider{display:flex;align-items:center;gap:8px;flex:1;min-width:210px;}
-    input[type="range"]{width:100%;}
-    .smallBadge{font-size:11px;color:var(--muted);}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div>
-        <h1>Typing Pet 🧫 謎の生物を育てる <span style="opacity:.7;font-size:.7em">(Audio)</span></h1>
+        <h1>Typing Pet 🧫 謎の生物を育てる <span style="opacity:.7;font-size:.7em">(Travel + 10k / Loud Typewriter)</span></h1>
         <p class="sub">
-          タイピングの<strong>速さ</strong>・<strong>正確さ</strong>・<strong>継続</strong>で性格と姿が変化します。<span class="kbd">Enter</span>で判定。<span class="kbd">Esc</span>で入力リセット。
+          旅行予約・変更・キャンセルで使える英語を練習。<span class="kbd">Enter</span>で判定。<span class="kbd">Esc</span>で入力リセット。
         </p>
       </div>
       <div class="pillRow">
         <div class="pill"><span class="dot"></span><span id="statusPill">idle</span></div>
-        <div class="pill">Audio: WebAudio</div>
-        <div class="pill">1 file: index.html</div>
+        <div class="pill">Theme: travel</div>
+        <div class="pill">Prompts: 10,000 (no-repeat)</div>
+        <div class="pill">Sound: louder</div>
       </div>
     </header>
 
     <div class="grid">
-      <!-- LEFT: PET -->
       <section class="card">
         <h2>
           <span>生物観察</span>
@@ -137,43 +204,29 @@
         </div>
       </section>
 
-      <!-- RIGHT: GAME -->
       <section class="card">
         <h2>
           <span>育成タイピング</span>
           <span class="right">
             <button class="btn" id="btnNewPrompt">お題を変える</button>
-            <button class="btn" id="btnToggleJP">日本語ヒント</button>
           </span>
         </h2>
         <div class="body typingBox">
-          <div class="prompt" id="promptBox">
-            <div id="promptText"></div>
-            <div class="jp" id="promptHint"></div>
-
-            <!-- Audio controls UI -->
-            <div class="audioRow">
-              <label class="toggle">
-                <input type="checkbox" id="bgmOn" checked>
-                <span>BGM</span>
-              </label>
-              <label class="toggle">
-                <input type="checkbox" id="seOn" checked>
-                <span>SE</span>
-              </label>
-              <div class="slider">
-                <span class="smallBadge">Volume</span>
-                <input type="range" id="vol" min="0" max="100" value="35" />
-                <span class="smallBadge" id="volLabel">35%</span>
-              </div>
+          <div class="prompt">
+            <div id="promptText" class="promptLine"></div>
+            <div class="mini" style="margin-top:8px">
+              ※ ブラウザからIMEを強制的に半角英数へ切替はできません。日本語入力が有効な場合は英数に切り替えてください。
             </div>
-            <div class="mini" id="audioHint" style="margin-top:8px">
-              音が鳴らないときは、入力欄をクリックして何かキーを押してください（ブラウザ制限で最初の操作が必要です）。
+            <div class="mini" style="margin-top:6px">
+              ※ iPhone等では最初の操作が必要です。音が出ないときは入力欄を一度タップしてからタイプしてください。
             </div>
           </div>
 
           <div class="inputRow">
-            <input id="typeInput" type="text" autocomplete="off" spellcheck="false" placeholder="ここに入力して Enter…" />
+            <input id="typeInput" type="text"
+              autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"
+              inputmode="latin" lang="en"
+              placeholder="上の英文をそのまま入力して Enter…" />
             <button class="btn primary" id="btnSubmit">Enter判定</button>
           </div>
 
@@ -206,14 +259,14 @@
           </div>
 
           <div class="mini">
-            ヒント: 入力が途切れたら生物は「休憩」します。一定時間放置するとエネルギー回復します（軽め）。
+            IME変換中（composition中）は色更新とタイプ音を抑制します。
           </div>
         </div>
       </section>
     </div>
 
     <footer>
-      音はすべてWeb Audioで生成（音声ファイル不要）。BGMはステージで雰囲気が変わります。
+      旅行予約の文章を中心に10,000パターン（重複なし）。入力ごとに上の英文が1文字ずつ色変化。タイプライター音はWeb Audioで生成（音量UP）。
     </footer>
   </div>
 
@@ -221,7 +274,6 @@
 
 <script>
 (() => {
-  // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const now = () => Date.now();
@@ -242,55 +294,176 @@
     return h >>> 0;
   };
   const lerp = (a,b,t) => a + (b-a)*t;
+  const escapeHtml = (s) =>
+    String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
 
-  // ---------- Prompts ----------
-  const PROMPTS = [
-    {en:"hello future me", jp:"未来の自分へ挨拶"},
-    {en:"i can do this today", jp:"今日はやれる"},
-    {en:"type like the wind", jp:"風のように打て"},
-    {en:"small steps every day", jp:"毎日の小さな一歩"},
-    {en:"stay curious stay kind", jp:"好奇心と優しさ"},
-    {en:"make it simple and fun", jp:"シンプルに楽しく"},
-    {en:"the pet is watching you", jp:"生物が見ている"},
-    {en:"debug the universe gently", jp:"宇宙を優しくデバッグ"},
-    {en:"create more than consume", jp:"消費より創作"},
-    {en:"ship it then improve it", jp:"まず出して改善"},
-    {en:"breathe in breathe out", jp:"吸って吐いて"},
-    {en:"focus for one minute", jp:"1分だけ集中"},
-    {en:"practice makes magic", jp:"練習は魔法"},
-    {en:"trust the process", jp:"プロセスを信じる"},
-    {en:"kindness is a superpower", jp:"優しさは超能力"},
-  ];
+  // ===== Typewriter Sound (LOUD DEFAULT) =====
+  const TypeSound = (() => {
+    let ctx = null;
+    let out = null;
+    let unlocked = false;
 
-  // ---------- State ----------
-  const STORAGE_KEY = "typing_pet_state_v2_audio";
+    function ensure() {
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        out = ctx.createGain();
+        out.gain.value = 0.85; // ★ここがデフォルト音量（大きめ）
+        out.connect(ctx.destination);
+      }
+    }
 
+    async function unlock() {
+      try {
+        ensure();
+        if (ctx.state === "suspended") await ctx.resume();
+        unlocked = true;
+        click({ a: 0.00001, t: 0.01, band: 1500, q: 8 });
+      } catch (e) {}
+    }
+
+    function click({ a = 0.09, t = 0.016, band = 1900, q = 9 } = {}) {
+      if (!unlocked) return;
+      ensure();
+      const sr = ctx.sampleRate;
+      const len = Math.max(32, Math.floor(sr * t));
+      const buf = ctx.createBuffer(1, len, sr);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const d = 1 - i / len;
+        data[i] = (Math.random() * 2 - 1) * (d * d);
+      }
+
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = band;
+      bp.Q.value = q;
+
+      const g = ctx.createGain();
+      const t0 = ctx.currentTime;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, a), t0 + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + t);
+
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(out);
+
+      src.start(t0);
+      src.stop(t0 + t + 0.02);
+    }
+
+    function type(kind = "char") {
+      if (!unlocked) return;
+
+      if (kind === "backspace") {
+        click({ a: 0.12, t: 0.020, band: 900, q: 6 });
+        setTimeout(() => click({ a: 0.07, t: 0.014, band: 700, q: 6 }), 10);
+        return;
+      }
+      if (kind === "space") {
+        click({ a: 0.10, t: 0.016, band: 1200, q: 7 });
+        return;
+      }
+      // normal
+      click({ a: 0.10, t: 0.014, band: 2000, q: 10 });
+      if (Math.random() < 0.35) setTimeout(() => click({ a: 0.06, t: 0.011, band: 2600, q: 10 }), 8);
+    }
+
+    return { unlock, type };
+  })();
+
+  // ----- Prompts (10k, travel only) -----
+  const PROMPT_COUNT = 10000;
+
+  function makeOrder(n, seed){
+    let x = (seed >>> 0) || 123456789;
+    const rnd = () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const arr = Array.from({length:n}, (_,i)=>i);
+    for(let i=n-1;i>0;i--){
+      const j = (rnd() * (i+1)) | 0;
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function ensureOrder(state){
+    state.prompts = state.prompts || {};
+    const bag = state.prompts.travel || (state.prompts.travel = {});
+    if(!bag.order || !Array.isArray(bag.order) || bag.order.length !== PROMPT_COUNT){
+      const seed = (state.seed || 0) ^ hash32(state.name + "::travel");
+      bag.order = makeOrder(PROMPT_COUNT, seed);
+      bag.pos = 0;
+      bag.cycle = 0;
+    }
+    return bag;
+  }
+
+  function nextPromptIndex(state){
+    const bag = ensureOrder(state);
+    const idx = bag.order[bag.pos];
+    bag.pos = (bag.pos + 1) % PROMPT_COUNT;
+    if(bag.pos === 0){
+      bag.cycle = (bag.cycle || 0) + 1;
+      const seed2 = ((state.seed || 0) + (bag.cycle||1)) ^ hash32(state.name + "::travel::cycle");
+      bag.order = makeOrder(PROMPT_COUNT, seed2);
+      bag.pos = 0;
+    }
+    return idx;
+  }
+
+  function mixedRadixPick(i, bases){
+    let x = i;
+    const out = [];
+    for(let k=bases.length-1;k>=0;k--){
+      const b = bases[k];
+      out[k] = x % b;
+      x = (x / b) | 0;
+    }
+    return out;
+  }
+
+  const TRAVEL = {
+    OPEN: ["hello,","hi there,","good morning,","good afternoon,","excuse me,","i have a question.","i need help.","could you help me,","i would like to check something.","i am calling about a reservation.","i am emailing about my booking.","i need to update my booking."],
+    INTENT: ["i would like to book","i would like to reserve","i need to change","i need to modify","i need to cancel","i would like to confirm","i would like to rebook","i need to extend","i need to shorten","i need to add","i need to remove","i need to correct"],
+    WHAT: ["a hotel room","a flight","a train ticket","a rental car","an airport transfer","a tour","a reservation","my booking","my itinerary","my seat","my check-in date","my guest name"],
+    DETAILS: ["for one person","for two people","for three people","for two adults and one child","with breakfast included","with a non-smoking room","with a double bed","with a late check-out","with free cancellation","with checked baggage","with a window seat if possible","with a child seat","with an automatic transmission","with insurance included","with an ocean view if available","and i have a confirmation number"],
+    DATE: ["from march 3 to march 5","from march 12 to march 14","from april 1 to april 4","from april 10 to april 12","from may 2 to may 6","from may 18 to may 20","on june 7","on june 21","on july 3","on july 19","on august 9","on september 2","next monday","next friday","this weekend","tomorrow","today","in the evening","in the morning","around 3 pm"],
+    EXTRA: ["could you confirm the total price","could you confirm the cancellation policy","could you send me the updated confirmation","could you tell me what documents i need","could you check availability","could you recommend the best option","could you confirm the check-in time","could you confirm the baggage allowance","could you help me change the dates","could you help me change the name on the reservation","could you help me add another guest","could you help me change the payment method","could you confirm the pickup location","could you confirm the drop-off time","could you help me choose seats","could you tell me if there is an extra fee"]
+  };
+
+  function promptByIndex(i){
+    const bases = [TRAVEL.OPEN.length, TRAVEL.INTENT.length, TRAVEL.WHAT.length, TRAVEL.DETAILS.length, TRAVEL.DATE.length, TRAVEL.EXTRA.length];
+    const [a,b,c,d,e,f] = mixedRadixPick(i, bases);
+    const open = TRAVEL.OPEN[a];
+    const intent = TRAVEL.INTENT[b];
+    const what = TRAVEL.WHAT[c];
+    const details = TRAVEL.DETAILS[d];
+    const date = TRAVEL.DATE[e];
+    const extra = TRAVEL.EXTRA[f];
+    const core = `${intent} ${what} ${details} ${date}.`;
+    return `${open} ${core} ${extra}?`;
+  }
+
+  // ----- State -----
+  const STORAGE_KEY = "typing_pet_state_travel_only_typewriter_loud_v1";
   const defaultState = () => ({
     name: generateName(),
     createdAt: now(),
     lastSeen: now(),
-    lv: 1,
-    xp: 0,
-    stage: 0,
-    energy: 0.72,
-    mood: 0.55,
-    glow: 0.45,
-    spikes: 0.25,
-    wobble: 0.35,
-    friendliness: 0.55,
+    lv: 1, xp: 0, stage: 0,
+    energy: 0.72, mood: 0.55, glow: 0.45, spikes: 0.25, wobble: 0.35, friendliness: 0.55,
     trait: "balanced",
     combo: 0,
-    wpmNow: null,
-    accNow: null,
+    wpmNow: null, accNow: null,
     seed: (Math.random()*1e9)|0,
-    promptIndex: (Math.random()*PROMPTS.length)|0,
-    showJP: true,
     log: [],
-    audio: {
-      bgmOn: true,
-      seOn: true,
-      vol: 0.35
-    }
+    prompts: {},
+    promptIndex: null
   });
 
   function generateName(){
@@ -298,24 +471,10 @@
     const b = ["blob","mite","ling","core","seed","goo","puff","wisp","morph","bud","nug","sprout","gazer","drift","node"];
     return pick(a) + pick(b);
   }
+  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return null; const s = JSON.parse(raw); return (s && typeof s==="object") ? s : null; }catch(e){ return null; } }
+  function saveState(){ try{ state.lastSeen = now(); localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return null;
-      const s = JSON.parse(raw);
-      if(!s || typeof s !== "object") return null;
-      return s;
-    }catch(e){ return null; }
-  }
-  function saveState(){
-    try{
-      state.lastSeen = now();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }catch(e){}
-  }
-
-  // ---------- Elements ----------
+  // ----- Elements -----
   const cv = $("#cv");
   const ctx = cv.getContext("2d");
   const toastEl = $("#toast");
@@ -327,11 +486,9 @@
     petLv: $("#petLv"),
     energyBar: $("#energyBar"),
     promptText: $("#promptText"),
-    promptHint: $("#promptHint"),
     typeInput: $("#typeInput"),
     btnSubmit: $("#btnSubmit"),
     btnNewPrompt: $("#btnNewPrompt"),
-    btnToggleJP: $("#btnToggleJP"),
     btnSnapshot: $("#btnSnapshot"),
     btnShare: $("#btnShare"),
     btnReset: $("#btnReset"),
@@ -340,27 +497,15 @@
     comboNow: $("#comboNow"),
     traitNow: $("#traitNow"),
     log: $("#log"),
-    bgmOn: $("#bgmOn"),
-    seOn: $("#seOn"),
-    vol: $("#vol"),
-    volLabel: $("#volLabel"),
-    audioHint: $("#audioHint"),
   };
 
-  // ---------- Toast ----------
+  // ----- Toast & Log -----
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toast._t);
     toast._t = setTimeout(()=>toastEl.classList.remove("show"), 1100);
   }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-  }
-
-  // ---------- Logs ----------
   function pushLog(kind, msg){
     const item = { t: now(), kind, msg };
     state.log = state.log || [];
@@ -379,16 +524,9 @@
     });
   }
 
-  // ---------- Pet naming ----------
-  function stageName(stage){
-    return ["芽生え","ぷるぷる","発光体","多脚体","未知体"][clamp(stage,0,4)];
-  }
-  function moodName(m){
-    if(m < 0.25) return "calm";
-    if(m < 0.55) return "curious";
-    if(m < 0.80) return "wild";
-    return "feral";
-  }
+  // ----- Pet helpers -----
+  function stageName(stage){ return ["芽生え","ぷるぷる","発光体","多脚体","未知体"][clamp(stage,0,4)]; }
+  function moodName(m){ if(m < 0.25) return "calm"; if(m < 0.55) return "curious"; if(m < 0.80) return "wild"; return "feral"; }
   function traitFrom(s){
     const { friendliness, glow, spikes, wobble } = s;
     if (friendliness > 0.68 && spikes < 0.45) return "gentle";
@@ -398,373 +536,115 @@
     return "balanced";
   }
 
-  // ---------- Web Audio (No files) ----------
-  const Audio = (() => {
-    let ctx = null;
-    let master = null;
-    let bgmGain = null;
-    let seGain = null;
-
-    // BGM scheduling
-    let bgmTimer = null;
-    let bgmStep = 0;
-    let bgmLastStage = -1;
-    let unlocked = false;
-
-    function ensure(){
-      if(!ctx){
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-        master = ctx.createGain();
-        bgmGain = ctx.createGain();
-        seGain = ctx.createGain();
-        // mild safety limiter-ish
-        master.gain.value = 0.0;
-        bgmGain.gain.value = 0.0;
-        seGain.gain.value = 0.0;
-
-        bgmGain.connect(master);
-        seGain.connect(master);
-        master.connect(ctx.destination);
-      }
-      return ctx;
-    }
-
-    function setVolume(v){ // 0..1
-      ensure();
-      const t = ctx.currentTime;
-      // scale to feel nicer
-      const scaled = Math.pow(clamp(v,0,1), 1.3);
-      master.gain.setTargetAtTime(scaled, t, 0.03);
-    }
-
-    function setBgmOn(on){
-      ensure();
-      const t = ctx.currentTime;
-      bgmGain.gain.setTargetAtTime(on ? 1.0 : 0.0, t, 0.03);
-      if(on) startBgmLoop();
-    }
-    function setSeOn(on){
-      ensure();
-      const t = ctx.currentTime;
-      seGain.gain.setTargetAtTime(on ? 1.0 : 0.0, t, 0.02);
-    }
-
-    function unlock(){
-      // called on first user gesture
-      ensure();
-      if(ctx.state === "suspended") ctx.resume();
-      if(!unlocked){
-        unlocked = true;
-        // tiny silent beep to "prime" on some browsers
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        g.gain.value = 0.00001;
-        o.frequency.value = 440;
-        o.connect(g); g.connect(master);
-        o.start();
-        o.stop(ctx.currentTime + 0.02);
-      }
-      startBgmLoop();
-    }
-
-    // Basic synth voice
-    function beep({type="sine", f=440, t=0.08, a=0.12, det=0, slide=0}){
-      if(!unlocked) return;
-      ensure();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = type;
-      o.detune.value = det;
-      const nowT = ctx.currentTime;
-      o.frequency.setValueAtTime(f, nowT);
-      if(slide !== 0){
-        o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), nowT + t);
-      }
-      g.gain.setValueAtTime(0.0001, nowT);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, a), nowT + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, nowT + t);
-      o.connect(g);
-      g.connect(seGain);
-      o.start(nowT);
-      o.stop(nowT + t + 0.02);
-    }
-
-    function noiseHit({t=0.06, a=0.08, tone=1200}){
-      if(!unlocked) return;
-      ensure();
-      const bufferSize = Math.floor(ctx.sampleRate * t);
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for(let i=0;i<bufferSize;i++){
-        // quick decay noise
-        const d = 1 - i/bufferSize;
-        data[i] = (Math.random()*2-1) * d * d;
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = tone;
-
-      const g = ctx.createGain();
-      const nowT = ctx.currentTime;
-      g.gain.setValueAtTime(0.0001, nowT);
-      g.gain.exponentialRampToValueAtTime(a, nowT + 0.005);
-      g.gain.exponentialRampToValueAtTime(0.0001, nowT + t);
-
-      src.connect(filter);
-      filter.connect(g);
-      g.connect(seGain);
-      src.start(nowT);
-      src.stop(nowT + t + 0.02);
-    }
-
-    // SE patterns
-    function seSuccess(stage){
-      if(!unlocked) return;
-      // bright chirp
-      const base = [740, 820, 900, 980, 1040][stage] || 860;
-      beep({type:"triangle", f:base, t:0.07, a:0.10, slide:+260});
-      setTimeout(()=>beep({type:"sine", f:base*1.25, t:0.05, a:0.07, slide:+120}), 35);
-    }
-    function seMiss(stage){
-      if(!unlocked) return;
-      const base = [220, 200, 190, 180, 160][stage] || 190;
-      beep({type:"square", f:base, t:0.09, a:0.08, slide:-40});
-      setTimeout(()=>noiseHit({t:0.05, a:0.05, tone:900}), 10);
-    }
-    function seLevelUp(stage){
-      if(!unlocked) return;
-      // arpeggio up
-      const base = [330, 350, 370, 390, 420][stage] || 360;
-      const notes = [0, 4, 7, 12];
-      notes.forEach((n, i) => {
-        const f = base * Math.pow(2, n/12);
-        setTimeout(()=>beep({type:"sine", f, t:0.08, a:0.10, slide:+90}), i*70);
-      });
-      setTimeout(()=>noiseHit({t:0.08, a:0.06, tone:1800}), 80);
-    }
-    function seEvolve(stage){
-      if(!unlocked) return;
-      // sparkle burst
-      const base = 520 + stage*70;
-      for(let i=0;i<6;i++){
-        const f = base * Math.pow(2, (i*2)/12);
-        setTimeout(()=>beep({type:"triangle", f, t:0.06, a:0.09, slide:+200}), i*45);
-      }
-      setTimeout(()=>noiseHit({t:0.10, a:0.07, tone:2400}), 80);
-    }
-
-    // BGM: lightweight step sequencer
-    function stageMusic(stage){
-      // return {bpm, scale[], bass[], chord[]}
-      // Use pentatonic-ish for pleasant looping
-      const scales = [
-        [0, 2, 4, 7, 9],         // major pentatonic
-        [0, 3, 5, 7, 10],        // minor pentatonic
-        [0, 2, 5, 7, 9],         // sus-ish
-        [0, 2, 4, 6, 9],         // lydian-ish
-        [0, 1, 5, 7, 10],        // alien-ish
-      ];
-      const rootHz = [196, 220, 247, 262, 294][stage] || 220;
-      const bpm = [92, 98, 104, 112, 118][stage] || 100;
-      const scale = scales[stage] || scales[0];
-      const bassPattern = [
-        0, 0, 7, 0,  0, 0, 9, 0
-      ];
-      const chord = [0, 4, 7]; // triad degrees (we'll map via semitones directly)
-      return {rootHz, bpm, scale, bassPattern, chord};
-    }
-
-    function playTone({freq, dur, gain=0.06, type="sine", when=0, pan=0, intoBgm=true}){
-      ensure();
-      const o = ctx.createOscillator();
-      o.type = type;
-      o.frequency.value = freq;
-
-      const g = ctx.createGain();
-      const t0 = when;
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), t0 + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-
-      // optional stereo pan
-      let dest = intoBgm ? bgmGain : seGain;
-      if(ctx.createStereoPanner){
-        const p = ctx.createStereoPanner();
-        p.pan.value = pan;
-        o.connect(g);
-        g.connect(p);
-        p.connect(dest);
-      }else{
-        o.connect(g);
-        g.connect(dest);
-      }
-
-      o.start(t0);
-      o.stop(t0 + dur + 0.02);
-    }
-
-    function startBgmLoop(){
-      if(!ctx || !unlocked) return;
-      if(bgmTimer) return;
-      // schedule tick
-      bgmTimer = setInterval(()=>tickBgm(), 50);
-      bgmStep = 0;
-    }
-
-    function stopBgmLoop(){
-      if(bgmTimer){
-        clearInterval(bgmTimer);
-        bgmTimer = null;
-      }
-    }
-
-    let nextScheduleAt = 0;
-    function tickBgm(){
-      if(!ctx) return;
-      if(!state.audio?.bgmOn){
-        stopBgmLoop();
-        return;
-      }
-      const t = ctx.currentTime;
-      if(nextScheduleAt === 0) nextScheduleAt = t + 0.05;
-
-      // if stage changed, reset
-      if(state.stage !== bgmLastStage){
-        bgmLastStage = state.stage;
-        bgmStep = 0;
-        nextScheduleAt = t + 0.05;
-      }
-
-      // schedule ahead a little
-      const m = stageMusic(state.stage);
-      const spb = 60 / m.bpm;
-      const stepDur = spb / 2; // 8th notes
-      while(nextScheduleAt < t + 0.18){
-        // melody
-        const deg = m.scale[(bgmStep + (hash32(state.name)%m.scale.length)) % m.scale.length];
-        const octave = (bgmStep % 8 < 4) ? 1 : 2;
-        const freq = m.rootHz * Math.pow(2, octave) * Math.pow(2, deg/12);
-
-        // energy affects density/volume
-        const e = clamp(state.energy,0,1);
-        const baseGain = 0.028 + e*0.03;
-
-        // skip some notes when sleepy
-        const playMel = Math.random() < (0.70 + e*0.25);
-        if(playMel){
-          playTone({
-            freq, dur: stepDur*0.92, gain: baseGain,
-            type: (state.stage>=3 ? "triangle" : "sine"),
-            when: nextScheduleAt,
-            pan: Math.sin(bgmStep*0.6)*0.35
-          });
-        }
-
-        // bass on even steps
-        if(bgmStep % 4 === 0){
-          const bdeg = m.bassPattern[(bgmStep/1) % m.bassPattern.length] || 0;
-          const bfreq = m.rootHz * Math.pow(2, -1) * Math.pow(2, bdeg/12);
-          playTone({
-            freq: bfreq, dur: stepDur*1.8, gain: 0.020 + e*0.02,
-            type: "sine",
-            when: nextScheduleAt,
-            pan: 0
-          });
-        }
-
-        // sparkle pad occasionally (higher stages)
-        if(state.stage >= 2 && bgmStep % 8 === 6 && Math.random() < 0.55){
-          const c = m.chord;
-          c.forEach((n,i)=>{
-            const pf = m.rootHz * Math.pow(2, 1.5) * Math.pow(2, n/12);
-            playTone({freq:pf, dur: stepDur*2.2, gain: 0.010 + state.glow*0.02, type:"sine", when: nextScheduleAt + i*0.01, pan:-0.25+0.25*i});
-          });
-        }
-
-        bgmStep++;
-        nextScheduleAt += stepDur;
-      }
-    }
-
-    return {
-      ensure, unlock,
-      setVolume, setBgmOn, setSeOn,
-      seSuccess, seMiss, seLevelUp, seEvolve
-    };
+  // ----- Init -----
+  let state = loadState() || defaultState();
+  (function migrate(){
+    const d = defaultState();
+    for(const k in d){ if(state[k] === undefined) state[k] = d[k]; }
+    state.log = state.log || [];
+    state.prompts = state.prompts || {};
+    state.energy = clamp(state.energy ?? 0.7, 0, 1);
+    state.mood = clamp(state.mood ?? 0.55, 0, 1);
+    state.glow = clamp(state.glow ?? 0.45, 0, 1);
+    state.spikes = clamp(state.spikes ?? 0.25, 0, 1);
+    state.wobble = clamp(state.wobble ?? 0.35, 0, 1);
+    state.friendliness = clamp(state.friendliness ?? 0.55, 0, 1);
   })();
 
-  // ---------- Init state ----------
-  let state = loadState() || defaultState();
-
-  // passive recovery while away
   const awayMs = now() - (state.lastSeen || now());
   if (awayMs > 10_000) {
     const mins = awayMs / 60000;
     const rec = clamp(mins * 0.015, 0, 0.18);
     state.energy = clamp((state.energy ?? 0.7) + rec, 0, 1);
-    state.log = state.log || [];
     state.log.unshift({t: now(), kind:"info", msg:`留守中にエネルギーが少し回復した (+${Math.round(rec*100)}%).`});
     state.log = state.log.slice(0,60);
   }
 
-  // ---------- Typing session tracking ----------
-  let session = {
-    startedAt: null,
-    lastKeyAt: null,
-    typed: "",
-    target: "",
-    idle: true
-  };
+  // ----- Typing session -----
+  let session = { startedAt: null, lastKeyAt: null, typed: "", target: "", idle: true };
+  let composing = false;
+  let lastKeyKind = "char";
 
-  // ---------- UI ----------
+  // ----- Prompt rendering -----
+  let promptChars = [];
+  function renderPromptChars(text){
+    el.promptText.innerHTML = "";
+    promptChars = [];
+    for(let i=0;i<text.length;i++){
+      const span = document.createElement("span");
+      span.className = "ch todo";
+      const ch = text[i];
+      span.textContent = (ch === " ") ? "\u00A0" : ch;
+      el.promptText.appendChild(span);
+      promptChars.push(span);
+    }
+    updatePromptHighlight("");
+  }
+  function updatePromptHighlight(typed){
+    const target = session.target || "";
+    const tLen = target.length;
+    const uLen = typed.length;
+
+    const min = Math.min(tLen, promptChars.length);
+    for(let i=0;i<min;i++){
+      const sp = promptChars[i];
+      sp.classList.remove("ok","bad","todo","caret");
+      if(i < uLen){
+        sp.classList.add(typed[i] === target[i] ? "ok" : "bad");
+      }else{
+        sp.classList.add("todo");
+      }
+    }
+    const caretPos = clamp(uLen, 0, Math.max(0, tLen-1));
+    if(promptChars[caretPos]) promptChars[caretPos].classList.add("caret");
+  }
+  function shakePrompt(){
+    el.promptText.classList.remove("shake");
+    void el.promptText.offsetWidth;
+    el.promptText.classList.add("shake");
+  }
+
+  // ----- UI -----
   function updateHeaderUI(){
-    el.petName.textContent = state.name;
-    el.petStage.textContent = stageName(state.stage);
-    el.petMood.textContent = moodName(state.mood);
-    el.petLv.textContent = state.lv;
-    el.energyBar.style.width = `${Math.round(state.energy*100)}%`;
-    el.wpmNow.textContent = state.wpmNow == null ? "-" : String(state.wpmNow);
-    el.accNow.textContent = state.accNow == null ? "-" : String(Math.round(state.accNow*100));
-    el.comboNow.textContent = String(state.combo || 0);
-    state.trait = traitFrom(state);
-    el.traitNow.textContent = state.trait;
-    el.statusPill.textContent = session.idle ? "idle" : "awake";
+    $("#petName").textContent = state.name;
+    $("#petStage").textContent = stageName(state.stage);
+    $("#petMood").textContent = moodName(state.mood);
+    $("#petLv").textContent = state.lv;
+    $("#energyBar").style.width = `${Math.round(state.energy*100)}%`;
 
-    // audio ui
-    const a = state.audio || (state.audio = {bgmOn:true,seOn:true,vol:0.35});
-    el.bgmOn.checked = !!a.bgmOn;
-    el.seOn.checked = !!a.seOn;
-    el.vol.value = Math.round((a.vol ?? 0.35)*100);
-    el.volLabel.textContent = `${el.vol.value}%`;
+    $("#wpmNow").textContent = state.wpmNow == null ? "-" : String(state.wpmNow);
+    $("#accNow").textContent = state.accNow == null ? "-" : String(Math.round(state.accNow*100));
+    $("#comboNow").textContent = String(state.combo || 0);
+
+    state.trait = traitFrom(state);
+    $("#traitNow").textContent = state.trait;
+
+    $("#statusPill").textContent = session.idle ? "idle" : "awake";
   }
 
   function setPrompt(index=null){
-    if(index == null) index = (Math.random()*PROMPTS.length)|0;
-    state.promptIndex = index;
-    const p = PROMPTS[index];
-    session.target = p.en;
-    el.promptText.innerHTML = `<span style="font-family:var(--mono); font-size:15px">${escapeHtml(p.en)}</span>`;
-    el.promptHint.textContent = state.showJP ? `日本語: ${p.jp}` : "";
+    const idx = (index == null) ? nextPromptIndex(state) : index;
+    state.promptIndex = idx;
+    session.target = promptByIndex(idx);
+
+    renderPromptChars(session.target);
+
     el.typeInput.value = "";
     session.typed = "";
     session.startedAt = null;
     session.lastKeyAt = null;
     session.idle = true;
+
     updateHeaderUI();
     saveState();
   }
 
-  // ---------- Typing metrics ----------
+  // ----- Metrics -----
   function computeAccuracy(typed, target){
     const n = Math.max(typed.length, target.length);
     if(n === 0) return 1;
     let same = 0;
-    for(let i=0;i<n;i++){
-      if(typed[i] === target[i]) same++;
-    }
+    for(let i=0;i<n;i++){ if(typed[i] === target[i]) same++; }
     return same / n;
   }
   function computeWPM(typed, durationMs){
@@ -772,7 +652,6 @@
     const minutes = durationMs / 60000;
     return (typed.length / 5) / minutes;
   }
-
   function levelNeed(lv){
     return Math.round(24 + lv*10 + Math.pow(lv,1.25)*5);
   }
@@ -788,7 +667,6 @@
     const xpGain = baseXp + comboBonus;
 
     const energyCost = 0.04 + (1-a)*0.07 + w*0.02;
-    const energyDelta = -energyCost;
 
     const moodDelta = (w*0.10) - (a*0.08);
     const glowDelta = (quality*0.08) - (Math.abs(w-a)*0.03);
@@ -798,23 +676,23 @@
 
     let kind = "info";
     let msg = "";
-    if(acc >= 0.95 && wpm >= 50){
-      kind = "good"; msg = "きれいに打てた！ 生物が嬉しそうに光った。";
-    }else if(acc < 0.75){
-      kind = "bad"; msg = "ミスが多い…生物がトゲトゲしてきた。";
-    }else if(wpm < 25){
-      kind = "info"; msg = "ゆっくりでもOK。生物は落ち着いて観察している。";
-    }else{
-      kind = "good"; msg = "いい調子。少し成長した。";
-    }
-    return {xpGain, energyDelta, moodDelta, glowDelta, spikeDelta, wobbleDelta, friendlyDelta, msg, kind};
+    if(acc >= 0.95 && wpm >= 50){ kind = "good"; msg = "きれいに打てた！ 生物が嬉しそうに光った。"; }
+    else if(acc < 0.75){ kind = "bad"; msg = "ミスが多い…生物がトゲトゲしてきた。"; }
+    else if(wpm < 25){ kind = "info"; msg = "ゆっくりでもOK。生物は落ち着いて観察している。"; }
+    else { kind = "good"; msg = "いい調子。少し成長した。"; }
+
+    return {
+      xpGain,
+      energyDelta: -energyCost,
+      moodDelta, glowDelta, spikeDelta, wobbleDelta, friendlyDelta,
+      msg, kind
+    };
   }
 
   function applyReward(wpm, acc){
     const r = rewardFrom(wpm, acc);
     const pass = (acc >= 0.86);
-    if(pass) state.combo = (state.combo||0) + 1;
-    else state.combo = 0;
+    state.combo = pass ? (state.combo||0) + 1 : 0;
 
     state.xp += r.xpGain;
     state.energy = clamp(state.energy + r.energyDelta, 0, 1);
@@ -828,146 +706,37 @@
     state.accNow = acc;
     state.trait = traitFrom(state);
 
-    // SE: success/miss
-    if(state.audio?.seOn){
-      if(pass) Audio.seSuccess(state.stage);
-      else Audio.seMiss(state.stage);
-    }
-
     pushLog(r.kind, `${r.msg} (+XP ${r.xpGain}, Acc ${Math.round(acc*100)}%, WPM ${Math.round(wpm)})`);
 
-    // handle level up & evolve with sounds
-    let leveled = false;
-    let evolved = false;
-    const need0 = levelNeed(state.lv);
-    while(state.xp >= need0){
-      state.xp -= need0;
+    while(state.xp >= levelNeed(state.lv)){
+      state.xp -= levelNeed(state.lv);
       state.lv++;
-      leveled = true;
       pushLog("good", `レベルアップ！ Lv ${state.lv} になった。`);
       state.energy = clamp(state.energy + 0.12, 0, 1);
 
       const newStage = Math.min(4, Math.floor((state.lv-1)/4));
       if(newStage !== state.stage){
         state.stage = newStage;
-        evolved = true;
         pushLog("good", `進化！ 姿が「${stageName(state.stage)}」になった。`);
       }
     }
 
-    if(state.audio?.seOn){
-      if(leveled) Audio.seLevelUp(state.stage);
-      if(evolved) Audio.seEvolve(state.stage);
-    }
-
-    if(state.energy <= 0.02){
-      pushLog("bad", "疲れ切った…少し休ませてあげよう（放置で回復）。");
-    }
-
+    if(state.energy <= 0.02) pushLog("bad", "疲れ切った…少し休ませてあげよう（放置で回復）。");
     saveState();
   }
 
-  // ---------- Audio UI Wiring ----------
-  function syncAudioSettings(){
-    state.audio = state.audio || {bgmOn:true,seOn:true,vol:0.35};
-    state.audio.bgmOn = !!el.bgmOn.checked;
-    state.audio.seOn = !!el.seOn.checked;
-    state.audio.vol = clamp(Number(el.vol.value)/100, 0, 1);
-    el.volLabel.textContent = `${el.vol.value}%`;
-    saveState();
-
-    // Apply to audio engine if initialized
-    Audio.ensure();
-    Audio.setVolume(state.audio.vol);
-    Audio.setBgmOn(state.audio.bgmOn);
-    Audio.setSeOn(state.audio.seOn);
-  }
-
-  el.bgmOn.addEventListener("change", () => { ensureAudioUnlocked(); syncAudioSettings(); });
-  el.seOn.addEventListener("change",  () => { ensureAudioUnlocked(); syncAudioSettings(); });
-  el.vol.addEventListener("input",    () => { ensureAudioUnlocked(); syncAudioSettings(); });
-
-  function ensureAudioUnlocked(){
-    // call once on first user gesture
-    try{
-      Audio.unlock();
-      // set settings
-      Audio.setVolume(state.audio?.vol ?? 0.35);
-      Audio.setBgmOn(!!state.audio?.bgmOn);
-      Audio.setSeOn(!!state.audio?.seOn);
-      el.audioHint.textContent = "音が有効になりました。BGM/SE/音量で調整できます。";
-    }catch(e){
-      el.audioHint.textContent = "この環境では音が利用できない可能性があります。";
-    }
-  }
-
-  // Unlock on first pointer/keydown anywhere
-  const unlockOnce = () => {
-    ensureAudioUnlocked();
-    window.removeEventListener("pointerdown", unlockOnce);
-    window.removeEventListener("keydown", unlockOnce);
-    window.removeEventListener("touchstart", unlockOnce);
-  };
-  window.addEventListener("pointerdown", unlockOnce, {passive:true});
-  window.addEventListener("touchstart", unlockOnce, {passive:true});
-  window.addEventListener("keydown", unlockOnce);
-
-  // ---------- Buttons ----------
-  el.btnNewPrompt.addEventListener("click", () => {
-    setPrompt(null);
-    pushLog("info", "お題を変えた。新しい刺激だ。");
-    ensureAudioUnlocked();
+  // ----- IME events -----
+  el.typeInput.addEventListener("compositionstart", () => {
+    composing = true;
+    toast("IME変換中… 英数入力に切り替えてください");
   });
-  el.btnToggleJP.addEventListener("click", () => {
-    state.showJP = !state.showJP;
-    setPrompt(state.promptIndex);
-    toast(state.showJP ? "日本語ヒントON" : "日本語ヒントOFF");
-    ensureAudioUnlocked();
-  });
-  el.btnSubmit.addEventListener("click", submit);
-
-  el.btnSnapshot.addEventListener("click", () => {
-    const a = document.createElement("a");
-    a.download = `${state.name}_lv${state.lv}.png`;
-    a.href = cv.toDataURL("image/png");
-    a.click();
-    toast("PNG保存");
-    pushLog("info", "観察記録（PNG）を保存した。");
-    ensureAudioUnlocked();
+  el.typeInput.addEventListener("compositionend", () => {
+    composing = false;
+    session.typed = el.typeInput.value;
+    updatePromptHighlight(session.typed);
   });
 
-  el.btnShare.addEventListener("click", async () => {
-    const text = makeShareText();
-    try{
-      await navigator.clipboard.writeText(text);
-      toast("コピーしました");
-    }catch(e){
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      toast("コピーしました");
-    }
-    pushLog("info", "シェア文をコピーした。");
-    ensureAudioUnlocked();
-  });
-
-  el.btnReset.addEventListener("click", () => {
-    if(!confirm("本当に初期化しますか？（この端末の育成データが消えます）")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    state = defaultState();
-    stars = null;
-    setPrompt(state.promptIndex);
-    renderLog();
-    updateHeaderUI();
-    pushLog("info", "新しい個体が誕生した。");
-    toast("初期化しました");
-    ensureAudioUnlocked();
-  });
-
-  // ---------- Input handling ----------
+  // ----- Input events -----
   function startSessionIfNeeded(){
     if(session.startedAt == null){
       session.startedAt = now();
@@ -977,28 +746,51 @@
   }
 
   el.typeInput.addEventListener("keydown", (e) => {
-    ensureAudioUnlocked();
-    if(e.key === "Enter"){
-      e.preventDefault();
-      submit();
-      return;
-    }
+    TypeSound.unlock();
+
+    if(e.key === "Enter"){ e.preventDefault(); submit(); return; }
     if(e.key === "Escape"){
       e.preventDefault();
       el.typeInput.value = "";
       session.typed = "";
+      updatePromptHighlight("");
       toast("リセット");
       return;
     }
+
     startSessionIfNeeded();
     session.lastKeyAt = now();
+
+    if(e.isComposing || composing) return;
+
+    if(e.key === "Backspace") lastKeyKind = "backspace";
+    else if(e.key === " ") lastKeyKind = "space";
+    else if(e.key.length === 1) lastKeyKind = "char";
+    else lastKeyKind = "other";
   });
 
-  el.typeInput.addEventListener("input", () => {
-    session.typed = el.typeInput.value;
+  el.typeInput.addEventListener("input", (e) => {
     startSessionIfNeeded();
     session.lastKeyAt = now();
+
+    session.typed = el.typeInput.value;
+
+    if(e.isComposing || composing) return;
+
+    updatePromptHighlight(session.typed);
+
+    const target = session.target || "";
+    if(session.typed.length > target.length) shakePrompt();
+
+    const inputType = e.inputType || "";
+    if(inputType.startsWith("delete")) TypeSound.type("backspace");
+    else if(lastKeyKind === "space") TypeSound.type("space");
+    else if(lastKeyKind === "char") TypeSound.type("char");
   });
+
+  window.addEventListener("pointerdown", () => TypeSound.unlock(), { once:true, passive:true });
+  window.addEventListener("touchstart", () => TypeSound.unlock(), { once:true, passive:true });
+  window.addEventListener("keydown", () => TypeSound.unlock(), { once:true });
 
   function submit(){
     const typed = (el.typeInput.value || "");
@@ -1014,49 +806,79 @@
 
     applyReward(wpm, acc);
 
-    const verdict = (acc >= 0.86) ? "OK" : "MISS";
-    toast(`${verdict}  Acc ${Math.round(acc*100)}%  WPM ${Math.round(wpm)}`);
-
+    toast(`${(acc >= 0.86) ? "OK" : "MISS"}  Acc ${Math.round(acc*100)}%  WPM ${Math.round(wpm)}`);
     setPrompt(null);
 
     if(state.energy < 0.18) pushLog("bad", "ちょっと疲れてる…休憩しながら育てよう。");
     else if(state.combo >= 5) pushLog("good", `コンボ ${state.combo}！ どんどん学習している。`);
   }
 
-  function makeShareText(){
-    const acc = state.accNow==null ? "-" : `${Math.round(state.accNow*100)}%`;
-    const wpm = state.wpmNow==null ? "-" : `${state.wpmNow}`;
-    return [
-      `Typing Pet 育成ログ`,
+  // ----- Buttons -----
+  el.btnNewPrompt.addEventListener("click", () => { setPrompt(null); pushLog("info", "お題を変えた。新しい旅の予定だ。"); TypeSound.unlock(); });
+  el.btnSubmit.addEventListener("click", () => { TypeSound.unlock(); submit(); });
+
+  el.btnSnapshot.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.download = `${state.name}_lv${state.lv}.png`;
+    a.href = cv.toDataURL("image/png");
+    a.click();
+    toast("PNG保存");
+    pushLog("info", "観察記録（PNG）を保存した。");
+    TypeSound.unlock();
+  });
+
+  el.btnShare.addEventListener("click", async () => {
+    const text = [
+      `Typing Pet (travel booking)`,
       `Name: ${state.name}`,
       `Lv: ${state.lv} / Stage: ${stageName(state.stage)} / Trait: ${state.trait}`,
       `Energy: ${Math.round(state.energy*100)}% / Mood: ${moodName(state.mood)}`,
-      `Last: Acc ${acc}, WPM ${wpm}`,
+      `Last: Acc ${state.accNow==null ? "-" : Math.round(state.accNow*100)+"%"} , WPM ${state.wpmNow==null ? "-" : state.wpmNow}`,
       `#TypingPet`
     ].join("\n");
-  }
+    try{
+      await navigator.clipboard.writeText(text);
+      toast("コピーしました");
+    }catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast("コピーしました");
+    }
+    pushLog("info", "シェア文をコピーした。");
+    TypeSound.unlock();
+  });
 
-  // idle detection / passive recovery
+  el.btnReset.addEventListener("click", () => {
+    if(!confirm("本当に初期化しますか？（この端末の育成データが消えます）")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    stars = null;
+    setPrompt(null);
+    renderLog();
+    updateHeaderUI();
+    pushLog("info", "新しい個体が誕生した。");
+    toast("初期化しました");
+    TypeSound.unlock();
+  });
+
+  // ----- Idle recovery -----
   setInterval(() => {
     const idleFor = session.lastKeyAt ? (now() - session.lastKeyAt) : 999999;
     const wasIdle = session.idle;
     session.idle = idleFor > 7000;
-    if(session.idle && !wasIdle){
-      pushLog("info", "生物は休憩モードに入った。");
-    }
+    if(session.idle && !wasIdle) pushLog("info", "生物は休憩モードに入った。");
     if(session.idle){
-      const rec = 0.006;
-      state.energy = clamp(state.energy + rec, 0, 1);
+      state.energy = clamp(state.energy + 0.006, 0, 1);
       state.mood = clamp(state.mood - 0.004, 0, 1);
       state.glow = clamp(state.glow + 0.002, 0, 1);
       saveState();
-      updateHeaderUI();
-    }else{
-      updateHeaderUI();
     }
+    updateHeaderUI();
   }, 1200);
 
-  // ---------- Drawing (Canvas) ----------
+  // ----- Canvas drawing -----
   let t0 = now();
   let stars = null;
 
@@ -1212,6 +1034,8 @@
 
     const floorY = H*0.76;
     const glow = state.glow;
+
+    // floor glow
     ctx.save();
     ctx.globalAlpha = 0.35 + glow*0.35;
     const grd = ctx.createRadialGradient(W*0.5, floorY, 10, W*0.5, floorY, W*0.55);
@@ -1244,6 +1068,7 @@
     const hue2 = 105 + glow*20 - mood*10;
     const alpha = 0.82;
 
+    // shadow
     ctx.save();
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -1257,7 +1082,6 @@
 
     const deform = (0.10 + wobble*0.18) * (awake? 1.0 : 0.6);
     const pulse = 1 + Math.sin(t* (awake? 5.0: 2.0)) * deform * (0.35 + energy*0.65);
-
     ctx.scale(pulse, 1/pulse);
 
     const bodyPath = new Path2D();
@@ -1270,8 +1094,7 @@
       const r = R * (1 + wave + spike);
       const x = Math.cos(rad)*r;
       const y = Math.sin(rad)*r*0.92;
-      if(i===0) bodyPath.moveTo(x,y);
-      else bodyPath.lineTo(x,y);
+      if(i===0) bodyPath.moveTo(x,y); else bodyPath.lineTo(x,y);
     }
     bodyPath.closePath();
 
@@ -1289,6 +1112,7 @@
     ctx.stroke(bodyPath);
     ctx.restore();
 
+    // eyes & mouth
     const eyeY = -R*0.15 + bob*0.08;
     const eyeSpread = lerp(R*0.28, R*0.42, stage/4);
     const eyeSize = lerp(7, 14, clamp((state.lv-1)/18,0,1)) * (0.85 + energy*0.4);
@@ -1315,43 +1139,17 @@
     drawSparkles(R, t, glow);
 
     ctx.restore();
-
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-    ctx.fillText(`Trait: ${state.trait} | XP: ${state.xp}/${levelNeed(state.lv)}`, 16, H-16);
-    ctx.restore();
-
     requestAnimationFrame(draw);
   }
 
-  // ---------- Boot ----------
+  // ----- Boot -----
   function boot(){
-    // migrations / defaults
-    const d = defaultState();
-    for(const k in d){
-      if(state[k] === undefined) state[k] = d[k];
-    }
-    state.log = state.log || [];
-    state.audio = state.audio || {bgmOn:true,seOn:true,vol:0.35};
-    state.energy = clamp(state.energy ?? 0.7, 0, 1);
-    state.mood = clamp(state.mood ?? 0.55, 0, 1);
-    state.glow = clamp(state.glow ?? 0.45, 0, 1);
-    state.spikes = clamp(state.spikes ?? 0.25, 0, 1);
-    state.wobble = clamp(state.wobble ?? 0.35, 0, 1);
-    state.friendliness = clamp(state.friendliness ?? 0.55, 0, 1);
-
-    // set UI & apply audio settings (engine will actually start after unlock)
-    updateHeaderUI();
     renderLog();
-    setPrompt(state.promptIndex);
-
-    // init audio UI labels
-    el.volLabel.textContent = `${Math.round((state.audio.vol||0.35)*100)}%`;
-
+    updateHeaderUI();
+    setPrompt(null);
     requestAnimationFrame(draw);
     setTimeout(() => el.typeInput.focus(), 120);
+    saveState();
   }
 
   boot();
