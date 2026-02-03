@@ -1,1158 +1,934 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Typing Pet</title>
-  <style>
-    :root{
-      --bg:#0b1020;
-      --text:#eaf0ff;
-      --muted:#a8b3d6;
-      --line:rgba(255,255,255,.10);
-      --shadow: 0 18px 60px rgba(0,0,0,.45);
-      --radius: 18px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family: var(--sans);
-      background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(123,240,255,.16), transparent 60%),
-        radial-gradient(1000px 700px at 80% 30%, rgba(181,255,123,.12), transparent 60%),
-        radial-gradient(900px 700px at 50% 100%, rgba(255,107,139,.10), transparent 65%),
-        linear-gradient(180deg, #070a14, var(--bg));
-      color: var(--text);
-      overflow-x:hidden;
-    }
-    .wrap{max-width:1100px;margin:0 auto;padding:22px 16px 40px;}
-    header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding:10px 4px 18px;}
-    h1{margin:0;font-size:clamp(20px,2.6vw,32px);letter-spacing:.3px;line-height:1.15;}
-    .sub{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.45;}
-    .pillRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .pill{
-      padding:8px 10px;border:1px solid var(--line);
-      background:rgba(16,26,51,.55);border-radius:999px;font-size:12px;color:var(--muted);
-      display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.20);
-      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);user-select:none;
-    }
-    .dot{
-      width:10px;height:10px;border-radius:50%;
-      background:rgba(123,240,255,.65);
-      box-shadow:0 0 0 3px rgba(123,240,255,.12),0 0 24px rgba(123,240,255,.45);
-    }
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;}
-    @media (max-width:980px){.grid{grid-template-columns:1fr}.pillRow{justify-content:flex-start}}
-    .card{
-      border:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(16,26,51,.85), rgba(14,23,48,.70));
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;position:relative;
-    }
-    .card h2{
-      margin:0;padding:14px 16px;font-size:14px;color:var(--muted);letter-spacing:.4px;
-      border-bottom:1px solid var(--line);
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-    }
-    .card h2 .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;}
-    .btn{
-      appearance:none;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,34,.40);
-      color:var(--text);border-radius:12px;padding:8px 10px;font-size:12px;cursor:pointer;
-      transition:transform .08s ease, background .2s ease, border-color .2s ease;
-      user-select:none;
-    }
-    .btn:hover{background:rgba(10,16,34,.60);border-color:rgba(123,240,255,.35)}
-    .btn:active{transform:translateY(1px)}
-    .btn.primary{border-color:rgba(123,240,255,.35);background:rgba(123,240,255,.10);}
-    .btn.danger{border-color:rgba(255,107,139,.35);background:rgba(255,107,139,.10);}
-    .body{padding:14px 16px 16px;}
-    canvas{
-      width:100%;height:380px;display:block;
-      background:
-        radial-gradient(900px 400px at 50% 20%, rgba(123,240,255,.10), transparent 65%),
-        radial-gradient(600px 300px at 20% 80%, rgba(181,255,123,.08), transparent 60%),
-        linear-gradient(180deg, rgba(7,10,20,.55), rgba(7,10,20,.20));
-      border-bottom:1px solid var(--line);
-    }
-    .petFooter{display:flex;gap:12px;flex-wrap:wrap;padding:12px 16px 16px;align-items:center;justify-content:space-between;}
-    .statLine{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px;}
-    .tag{padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(0,0,0,.18);color:var(--muted);font-size:12px;}
-    .tag b{color:var(--text);font-weight:600}
-    .meter{height:9px;width:180px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);}
-    .meter>i{display:block;height:100%;width:30%;background:linear-gradient(90deg, rgba(123,240,255,.75), rgba(181,255,123,.70));box-shadow:0 0 24px rgba(123,240,255,.35);}
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ローマ字タイピング（5分）</title>
+<style>
+  :root{
+    --bg:#f7f7f7;
+    --bar:#6f8fb2;
+    --accent:#0aa0d7;
+    --accent2:#ff8a00;
+    --text:#2b2b2b;
+    --muted:#777;
+    --key:#ffffff;
+    --keyBorder:#d9d9d9;
+    --keyShadow:0 1px 0 rgba(0,0,0,.05);
+    --hl:#00a3ff;
+    --hl2:#ffb703;
+    --good:#0a84ff;
+    --bad:#ff3b30;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .topbar{
+    height:56px;
+    background:var(--bar);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 16px;
+  }
+  .topbar .title{
+    font-weight:700;
+    letter-spacing:.02em;
+  }
+  .topbar .right{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    white-space:nowrap;
+  }
+  .timerWrap{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .timerLabel{opacity:.95;font-weight:700}
+  .progress{
+    width:180px;
+    height:12px;
+    background:rgba(255,255,255,.25);
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .progress > div{
+    height:100%;
+    width:100%;
+    background:#66d100; /* benesseっぽい緑 */
+    transform-origin:left;
+    transform:scaleX(1);
+  }
+  .timeText{
+    font-weight:800;
+    font-size:28px;
+    letter-spacing:.03em;
+  }
+  .endBtn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 14px;
+    border-radius:999px;
+    border:none;
+    background:var(--accent2);
+    color:#fff;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .endBtn:active{transform:translateY(1px)}
+  .endIcon{
+    width:22px;height:22px;border-radius:50%;
+    background:#fff; color:var(--accent2);
+    display:grid; place-items:center;
+    font-weight:900; line-height:1;
+  }
 
-    .typingBox{display:flex;flex-direction:column;gap:12px;}
-    .prompt{
-      padding:12px 12px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;background:rgba(0,0,0,.16);
-      line-height:1.8;font-size:14px;
-    }
-    .promptLine{
-      font-family:var(--mono);
-      font-size:15px;
-      letter-spacing:.2px;
-      word-break:break-word;
-      white-space:pre-wrap;
-    }
-    .ch{
-      display:inline-block;
-      padding:0 0.5px;
-      border-radius:6px;
-      transition:background .08s ease, color .08s ease, box-shadow .08s ease;
-    }
-    .todo{ color: rgba(234,240,255,.55); }
-    .ok{ color: rgba(181,255,123,.95); text-shadow: 0 0 18px rgba(181,255,123,.18); }
-    .bad{ color: rgba(255,107,139,.95); background: rgba(255,107,139,.10); box-shadow: 0 0 0 1px rgba(255,107,139,.22) inset; }
-    .caret{ position:relative; }
-    .caret::after{
-      content:"";
-      position:absolute; left:-1px; bottom:-2px;
-      width:2px; height:1.25em;
-      background: rgba(123,240,255,.75);
-      border-radius:2px;
-      box-shadow: 0 0 18px rgba(123,240,255,.35);
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:32px 16px 40px;
+  }
 
-    .inputRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-    input[type="text"]{
-      flex:1;min-width:220px;padding:12px 12px;border-radius:14px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(10,16,34,.45);color:var(--text);outline:none;font-family:var(--mono);
-      font-size:14px;letter-spacing:.2px;
-      ime-mode: disabled;
-    }
-    input[type="text"]:focus{border-color:rgba(123,240,255,.45);box-shadow:0 0 0 3px rgba(123,240,255,.12);}
-    .mini{color:var(--muted);font-size:12px;line-height:1.5;}
-    .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media (max-width:520px){.cols{grid-template-columns:1fr}.meter{width:140px;}}
-    .kv{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(0,0,0,.14);}
-    .kv .k{color:var(--muted);font-size:12px}
-    .kv .v{margin-top:6px;font-size:16px;font-weight:700}
-    .log{height:220px;overflow:auto;padding-right:6px;}
-    .logItem{padding:10px 10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.14);margin-bottom:10px;font-size:13px;line-height:1.5;}
-    .logItem .t{color:var(--muted);font-size:11px;margin-bottom:4px}
-    .logItem.good{border-color:rgba(181,255,123,.20)}
-    .logItem.bad{border-color:rgba(255,107,139,.22)}
-    .logItem.info{border-color:rgba(123,240,255,.20)}
-    footer{margin-top:14px;color:rgba(255,255,255,.52);font-size:12px;padding:12px 4px;}
+  .countBadge{
+    display:inline-flex;
+    border-radius:6px;
+    overflow:hidden;
+    box-shadow:0 1px 0 rgba(0,0,0,.06);
+    margin:0 auto 22px;
+  }
+  .countBadge .label{
+    background:#bfe6ff;
+    padding:10px 18px;
+    font-weight:800;
+    color:#004d75;
+  }
+  .countBadge .val{
+    background:#eee;
+    padding:10px 18px;
+    min-width:64px;
+    text-align:right;
+    font-weight:900;
+    color:#ff6a00;
+  }
 
-    .toast{
-      position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
-      background:rgba(10,16,34,.88);border:1px solid rgba(255,255,255,.16);
-      border-radius:999px;padding:10px 14px;color:var(--text);font-size:12px;
-      box-shadow:0 20px 70px rgba(0,0,0,.50);
-      opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
-      z-index:9999;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);white-space:nowrap;
-    }
-    .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
-    .kbd{font-family:var(--mono);border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px;font-size:12px;color:var(--text);}
+  .center{
+    text-align:center;
+    margin-top:8px;
+  }
+  .jp{
+    font-size:44px;
+    font-weight:800;
+    color:#0a84ff;
+    line-height:1.25;
+  }
+  .divider{
+    height:2px;
+    background:#cfcfcf;
+    max-width:720px;
+    margin:10px auto 10px;
+  }
+  .kana{
+    font-size:20px;
+    color:#333;
+    margin:0 0 6px;
+  }
+  .romaji{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:.08em;
+    color:#111;
+    margin:0 0 10px;
+  }
+  .romaji .good{color:#111}
+  .romaji .typedGood{color:#111}
+  .romaji .typedBad{color:var(--bad)}
+  .romaji .rest{color:#b7b7b7}
 
-    .shake{animation: shake .18s linear 1;}
-    @keyframes shake{
-      0%{transform:translateX(0)}
-      25%{transform:translateX(-2px)}
-      50%{transform:translateX(2px)}
-      75%{transform:translateX(-1px)}
-      100%{transform:translateX(0)}
-    }
-  </style>
+  .hint{
+    margin-top:18px;
+    font-size:36px;
+    font-weight:900;
+    color:var(--accent2);
+  }
+  .subhint{
+    margin-top:6px;
+    color:#666;
+    font-weight:700;
+  }
+
+  /* Keyboard */
+  .kbWrap{
+    margin:28px auto 0;
+    width:min(980px, 100%);
+    background:#f0f0f0;
+    border-radius:14px;
+    padding:16px 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  }
+  .row{display:flex; gap:6px; justify-content:center; margin:6px 0;}
+  .key{
+    background:var(--key);
+    border:1px solid var(--keyBorder);
+    border-radius:6px;
+    box-shadow:var(--keyShadow);
+    min-width:44px;
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    color:#4a4a4a;
+    user-select:none;
+    position:relative;
+  }
+  .key.small{min-width:40px}
+  .key.wide{min-width:88px}
+  .key.wider{min-width:110px}
+  .key.space{min-width:340px}
+  .key.enter{min-width:96px}
+  .key.shift{min-width:120px}
+  .key.backspace{min-width:92px}
+  .key.hl{
+    background:rgba(0, 163, 255, .18);
+    border-color:rgba(0, 163, 255, .6);
+    box-shadow:0 0 0 3px rgba(0, 163, 255, .18);
+  }
+  .key.pressed{
+    background:rgba(255, 183, 3, .28);
+    border-color:rgba(255, 183, 3, .8);
+    box-shadow:0 0 0 3px rgba(255, 183, 3, .18);
+  }
+  .key .sub{
+    position:absolute;
+    right:6px;
+    bottom:4px;
+    font-size:10px;
+    opacity:.65;
+    font-weight:700;
+  }
+
+  /* Footer stats (small) */
+  .stats{
+    display:flex;
+    gap:16px;
+    justify-content:center;
+    margin-top:24px;
+    flex-wrap:wrap;
+  }
+  .stat{
+    width:170px;
+    background:#fff;
+    border:1px solid #e6e6e6;
+    border-radius:12px;
+    padding:14px 10px;
+    box-shadow:0 1px 0 rgba(0,0,0,.05);
+  }
+  .stat .k{color:#666;font-weight:800;font-size:14px}
+  .stat .v{margin-top:6px;font-weight:900;font-size:26px}
+  .hiddenInput{
+    position:absolute;
+    left:-9999px;
+    top:-9999px;
+    opacity:0;
+    width:1px;height:1px;
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div>
-        <h1>Typing Pet 🧫 謎の生物を育てる <span style="opacity:.7;font-size:.7em">(Travel + 10k / Loud Typewriter)</span></h1>
-        <p class="sub">
-          旅行予約・変更・キャンセルで使える英語を練習。<span class="kbd">Enter</span>で判定。<span class="kbd">Esc</span>で入力リセット。
-        </p>
+  <div class="topbar">
+    <div class="title">タイピング練習　日本語入力</div>
+    <div class="right">
+      <div class="timerWrap">
+        <div class="timerLabel">残り時間</div>
+        <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+        <div class="timeText"><span id="mm">5</span>分 <span id="ss">00</span>秒</div>
       </div>
-      <div class="pillRow">
-        <div class="pill"><span class="dot"></span><span id="statusPill">idle</span></div>
-        <div class="pill">Theme: travel</div>
-        <div class="pill">Prompts: 10,000 (no-repeat)</div>
-        <div class="pill">Sound: louder</div>
-      </div>
-    </header>
-
-    <div class="grid">
-      <section class="card">
-        <h2>
-          <span>生物観察</span>
-          <span class="right">
-            <button class="btn primary" id="btnSnapshot">PNG保存</button>
-            <button class="btn" id="btnShare">シェア文コピー</button>
-            <button class="btn danger" id="btnReset">初期化</button>
-          </span>
-        </h2>
-        <canvas id="cv" width="980" height="420"></canvas>
-        <div class="petFooter">
-          <div class="statLine">
-            <span class="tag">Name: <b id="petName"></b></span>
-            <span class="tag">Stage: <b id="petStage"></b></span>
-            <span class="tag">Mood: <b id="petMood"></b></span>
-          </div>
-          <div class="statLine">
-            <span class="tag">Energy</span>
-            <span class="meter"><i id="energyBar"></i></span>
-            <span class="tag">Lv <b id="petLv"></b></span>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>
-          <span>育成タイピング</span>
-          <span class="right">
-            <button class="btn" id="btnNewPrompt">お題を変える</button>
-          </span>
-        </h2>
-        <div class="body typingBox">
-          <div class="prompt">
-            <div id="promptText" class="promptLine"></div>
-            <div class="mini" style="margin-top:8px">
-              ※ ブラウザからIMEを強制的に半角英数へ切替はできません。日本語入力が有効な場合は英数に切り替えてください。
-            </div>
-            <div class="mini" style="margin-top:6px">
-              ※ iPhone等では最初の操作が必要です。音が出ないときは入力欄を一度タップしてからタイプしてください。
-            </div>
-          </div>
-
-          <div class="inputRow">
-            <input id="typeInput" type="text"
-              autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"
-              inputmode="latin" lang="en"
-              placeholder="上の英文をそのまま入力して Enter…" />
-            <button class="btn primary" id="btnSubmit">Enter判定</button>
-          </div>
-
-          <div class="cols">
-            <div class="kv">
-              <div class="k">WPM (直近)</div>
-              <div class="v"><span id="wpmNow">-</span></div>
-              <div class="mini">速いほど活発に。遅いと眠くなる。</div>
-            </div>
-            <div class="kv">
-              <div class="k">Accuracy (直近)</div>
-              <div class="v"><span id="accNow">-</span>%</div>
-              <div class="mini">ミスが多いと尖り、暴れやすい。</div>
-            </div>
-            <div class="kv">
-              <div class="k">Combo</div>
-              <div class="v"><span id="comboNow">0</span></div>
-              <div class="mini">連続成功で急成長。途切れると落ち着く。</div>
-            </div>
-            <div class="kv">
-              <div class="k">Trait</div>
-              <div class="v" id="traitNow">-</div>
-              <div class="mini">あなたの打ち方が性格を作る。</div>
-            </div>
-          </div>
-
-          <div class="kv">
-            <div class="k">育成ログ</div>
-            <div class="log" id="log"></div>
-          </div>
-
-          <div class="mini">
-            IME変換中（composition中）は色更新とタイプ音を抑制します。
-          </div>
-        </div>
-      </section>
+      <button class="endBtn" id="btnEnd" type="button"><span class="endIcon">×</span> 終了する</button>
     </div>
-
-    <footer>
-      旅行予約の文章を中心に10,000パターン（重複なし）。入力ごとに上の英文が1文字ずつ色変化。タイプライター音はWeb Audioで生成（音量UP）。
-    </footer>
   </div>
 
-  <div class="toast" id="toast">copied</div>
+  <div class="wrap">
+    <div class="center">
+      <div class="countBadge" aria-label="入力文字数">
+        <div class="label">入力文字数</div>
+        <div class="val" id="charCount">0</div>
+      </div>
+
+      <div id="idleView">
+        <div class="hint">スペースキーを押して開始します。</div>
+        <div class="subhint">（日本語入力モードはOFFにして下さい。）</div>
+      </div>
+
+      <div id="taskView" style="display:none">
+        <div class="jp" id="jpText">—</div>
+        <div class="divider"></div>
+        <div class="kana" id="kanaText">—</div>
+        <div class="romaji" id="romajiLine">—</div>
+      </div>
+
+      <input class="hiddenInput" id="hiddenInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <div class="kbWrap" id="kb"></div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">正解</div><div class="v" id="statOk">0</div></div>
+        <div class="stat"><div class="k">ミス</div><div class="v" id="statMiss">0</div></div>
+        <div class="stat"><div class="k">正確率</div><div class="v" id="statAcc">—</div></div>
+        <div class="stat"><div class="k">連続正解</div><div class="v" id="statStreak">0</div></div>
+        <div class="stat"><div class="k">速度</div><div class="v" id="statSpd">—</div></div>
+      </div>
+    </div>
+  </div>
 
 <script>
 (() => {
-  const $ = (sel) => document.querySelector(sel);
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const now = () => Date.now();
-  const fmtTime = (ms) => {
-    const d = new Date(ms);
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    const ss = String(d.getSeconds()).padStart(2,'0');
-    return `${hh}:${mm}:${ss}`;
+  // ===== Utilities =====
+  const $ = (id)=>document.getElementById(id);
+
+  const STATE = { IDLE:"idle", RUN:"run", DONE:"done" };
+  let state = STATE.IDLE;
+
+  const SESSION = {
+    totalSec: 5*60,
+    leftSec: 5*60,
+    timerId: null,
+    startedAt: 0,
+    startedTypingAt: 0,
+    ok: 0,
+    miss: 0,
+    streak: 0,
+    bestStreak: 0,
+    charCount: 0,
+    current: null, // {jp,kana,romaji}
+    typed: "",
+    mismatch: false, // current typed mismatch flag
+    order: [],
+    orderIdx: 0,
   };
-  const pick = (arr) => arr[(Math.random()*arr.length)|0];
-  const hash32 = (str) => {
-    let h = 2166136261;
-    for (let i=0;i<str.length;i++){
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
+
+  // ` は無効（誤操作防止）
+  function isBackquoteKey(e){
+    return e.code === "Backquote" || e.key === "`";
+  }
+
+  // 長音（ー/ｰ）は 半角ハイフン扱い
+  function normalizeTarget(s){
+    return String(s)
+      .replace(/[ーｰ]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  // ===== Romaji (kana -> romaji) =====
+  // 「ぁ/ぃ/ぅ/ぇ/ぉ」= la/li/lu/le/lo に統一済み
+  const KANA_MAP = {
+    "ぁ":"la","ぃ":"li","ぅ":"lu","ぇ":"le","ぉ":"lo",
+    "あ":"a","い":"i","う":"u","え":"e","お":"o",
+    "か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko",
+    "さ":"sa","し":"shi","す":"su","せ":"se","そ":"so",
+    "た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to",
+    "な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no",
+    "は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho",
+    "ま":"ma","み":"mi","む":"mu","め":"me","も":"mo",
+    "や":"ya","ゆ":"yu","よ":"yo",
+    "ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro",
+    "わ":"wa","を":"wo","ん":"n",
+    "が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go",
+    "ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo",
+    "だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do",
+    "ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo",
+    "ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po",
+    "きゃ":"kya","きゅ":"kyu","きょ":"kyo",
+    "しゃ":"sha","しゅ":"shu","しょ":"sho",
+    "ちゃ":"cha","ちゅ":"chu","ちょ":"cho",
+    "にゃ":"nya","にゅ":"nyu","にょ":"nyo",
+    "ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo",
+    "みゃ":"mya","みゅ":"myu","みょ":"myo",
+    "りゃ":"rya","りゅ":"ryu","りょ":"ryo",
+    "ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo",
+    "じゃ":"ja","じゅ":"ju","じょ":"jo",
+    "びゃ":"bya","びゅ":"byu","びょ":"byo",
+    "ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo",
+    "ふぁ":"fa","ふぃ":"fi","ふぇ":"fe","ふぉ":"fo",
+    "ゔぁ":"va","ゔぃ":"vi","ゔ":"vu","ゔぇ":"ve","ゔぉ":"vo",
+    "ゃ":"lya","ゅ":"lyu","ょ":"lyo",
+    "っ":"", // handled separately
+    "ー":"-","ｰ":"-",
+    "、":",","。":".","，":",","．":".","・":"/","／":"/",
+    "「":"","」":"","『":"","』":"","（":"", "）":"", "(": "", ")":"",
+    "　":" "," ":" "
   };
-  const lerp = (a,b,t) => a + (b-a)*t;
-  const escapeHtml = (s) =>
-    String(s).replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
 
-  // ===== Typewriter Sound (LOUD DEFAULT) =====
-  const TypeSound = (() => {
-    let ctx = null;
-    let out = null;
-    let unlocked = false;
-
-    function ensure() {
-      if (!ctx) {
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-        out = ctx.createGain();
-        out.gain.value = 0.85; // ★ここがデフォルト音量（大きめ）
-        out.connect(ctx.destination);
-      }
-    }
-
-    async function unlock() {
-      try {
-        ensure();
-        if (ctx.state === "suspended") await ctx.resume();
-        unlocked = true;
-        click({ a: 0.00001, t: 0.01, band: 1500, q: 8 });
-      } catch (e) {}
-    }
-
-    function click({ a = 0.09, t = 0.016, band = 1900, q = 9 } = {}) {
-      if (!unlocked) return;
-      ensure();
-      const sr = ctx.sampleRate;
-      const len = Math.max(32, Math.floor(sr * t));
-      const buf = ctx.createBuffer(1, len, sr);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) {
-        const d = 1 - i / len;
-        data[i] = (Math.random() * 2 - 1) * (d * d);
-      }
-
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-
-      const bp = ctx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = band;
-      bp.Q.value = q;
-
-      const g = ctx.createGain();
-      const t0 = ctx.currentTime;
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, a), t0 + 0.003);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + t);
-
-      src.connect(bp);
-      bp.connect(g);
-      g.connect(out);
-
-      src.start(t0);
-      src.stop(t0 + t + 0.02);
-    }
-
-    function type(kind = "char") {
-      if (!unlocked) return;
-
-      if (kind === "backspace") {
-        click({ a: 0.12, t: 0.020, band: 900, q: 6 });
-        setTimeout(() => click({ a: 0.07, t: 0.014, band: 700, q: 6 }), 10);
-        return;
-      }
-      if (kind === "space") {
-        click({ a: 0.10, t: 0.016, band: 1200, q: 7 });
-        return;
-      }
-      // normal
-      click({ a: 0.10, t: 0.014, band: 2000, q: 10 });
-      if (Math.random() < 0.35) setTimeout(() => click({ a: 0.06, t: 0.011, band: 2600, q: 10 }), 8);
-    }
-
-    return { unlock, type };
-  })();
-
-  // ----- Prompts (10k, travel only) -----
-  const PROMPT_COUNT = 10000;
-
-  function makeOrder(n, seed){
-    let x = (seed >>> 0) || 123456789;
-    const rnd = () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296;
-    const arr = Array.from({length:n}, (_,i)=>i);
-    for(let i=n-1;i>0;i--){
-      const j = (rnd() * (i+1)) | 0;
-      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-    }
-    return arr;
+  function toHira(s){
+    return String(s).replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0x60))
+                    .replace(/ヴ/g,"ゔ");
   }
 
-  function ensureOrder(state){
-    state.prompts = state.prompts || {};
-    const bag = state.prompts.travel || (state.prompts.travel = {});
-    if(!bag.order || !Array.isArray(bag.order) || bag.order.length !== PROMPT_COUNT){
-      const seed = (state.seed || 0) ^ hash32(state.name + "::travel");
-      bag.order = makeOrder(PROMPT_COUNT, seed);
-      bag.pos = 0;
-      bag.cycle = 0;
+  function kanaToRomaji(kana){
+    kana = toHira(kana);
+    let out = "";
+    for(let i=0;i<kana.length;i++){
+      const two = kana.slice(i, i+2);
+      if(KANA_MAP[two]){
+        out += KANA_MAP[two];
+        i++;
+        continue;
+      }
+      const ch = kana[i];
+      if(ch === "っ"){
+        // small tsu: double next consonant
+        const next2 = kana.slice(i+1, i+3);
+        const next1 = kana[i+1] ?? "";
+        let nextRoma = KANA_MAP[next2] || KANA_MAP[next1] || "";
+        if(nextRoma){
+          out += nextRoma[0];
+        }
+        continue;
+      }
+      if(ch === "ん"){
+        // 'n' before vowel/y
+        const next2 = kana.slice(i+1, i+3);
+        const next1 = kana[i+1] ?? "";
+        let nextRoma = KANA_MAP[next2] || KANA_MAP[next1] || "";
+        if(nextRoma && /^[aiueoy]/.test(nextRoma)){
+          out += "n'";
+        }else{
+          out += "n";
+        }
+        continue;
+      }
+      out += (KANA_MAP[ch] ?? ch);
     }
-    return bag;
-  }
-
-  function nextPromptIndex(state){
-    const bag = ensureOrder(state);
-    const idx = bag.order[bag.pos];
-    bag.pos = (bag.pos + 1) % PROMPT_COUNT;
-    if(bag.pos === 0){
-      bag.cycle = (bag.cycle || 0) + 1;
-      const seed2 = ((state.seed || 0) + (bag.cycle||1)) ^ hash32(state.name + "::travel::cycle");
-      bag.order = makeOrder(PROMPT_COUNT, seed2);
-      bag.pos = 0;
-    }
-    return idx;
-  }
-
-  function mixedRadixPick(i, bases){
-    let x = i;
-    const out = [];
-    for(let k=bases.length-1;k>=0;k--){
-      const b = bases[k];
-      out[k] = x % b;
-      x = (x / b) | 0;
-    }
+    // normalize spaces and long vowel already done
+    out = out.replace(/\s+/g," ").trim();
     return out;
   }
 
-  const TRAVEL = {
-    OPEN: ["hello,","hi there,","good morning,","good afternoon,","excuse me,","i have a question.","i need help.","could you help me,","i would like to check something.","i am calling about a reservation.","i am emailing about my booking.","i need to update my booking."],
-    INTENT: ["i would like to book","i would like to reserve","i need to change","i need to modify","i need to cancel","i would like to confirm","i would like to rebook","i need to extend","i need to shorten","i need to add","i need to remove","i need to correct"],
-    WHAT: ["a hotel room","a flight","a train ticket","a rental car","an airport transfer","a tour","a reservation","my booking","my itinerary","my seat","my check-in date","my guest name"],
-    DETAILS: ["for one person","for two people","for three people","for two adults and one child","with breakfast included","with a non-smoking room","with a double bed","with a late check-out","with free cancellation","with checked baggage","with a window seat if possible","with a child seat","with an automatic transmission","with insurance included","with an ocean view if available","and i have a confirmation number"],
-    DATE: ["from march 3 to march 5","from march 12 to march 14","from april 1 to april 4","from april 10 to april 12","from may 2 to may 6","from may 18 to may 20","on june 7","on june 21","on july 3","on july 19","on august 9","on september 2","next monday","next friday","this weekend","tomorrow","today","in the evening","in the morning","around 3 pm"],
-    EXTRA: ["could you confirm the total price","could you confirm the cancellation policy","could you send me the updated confirmation","could you tell me what documents i need","could you check availability","could you recommend the best option","could you confirm the check-in time","could you confirm the baggage allowance","could you help me change the dates","could you help me change the name on the reservation","could you help me add another guest","could you help me change the payment method","could you confirm the pickup location","could you confirm the drop-off time","could you help me choose seats","could you tell me if there is an extra fee"]
-  };
+  // ===== Phrase bank (約1000) =====
+  // 1) 手作業（漢字+よみ）: 例として自然な文章を優先
+  const BASE = [
+    {jp:"瀬戸大橋に行ってきました。", kana:"せとおおはしにいってきました。"},
+    {jp:"環境保護は重要だ。", kana:"かんきょうほごはじゅうようだ。"},
+    {jp:"帰ってきたら、手を洗おう。", kana:"かえってきたら、てをあらおう。"},
+    {jp:"朝ごはんを食べてから出発します。", kana:"あさごはんをたべてからしゅっぱつします。"},
+    {jp:"電車が遅れて困りました。", kana:"でんしゃがおくれてこまりました。"},
+    {jp:"今日は天気がいいですね。", kana:"きょうはてんきがいいですね。"},
+    {jp:"忘れ物をしないように。", kana:"わすれものをしないように。"},
+    {jp:"水分補給を忘れずに。", kana:"すいぶんほきゅうをわすれずに。"},
+    {jp:"静かにしてください。", kana:"しずかにしてください。"},
+    {jp:"安全第一で行動しよう。", kana:"あんぜんだいいちでこうどうしよう。"},
+    {jp:"時間に余裕を持とう。", kana:"じかんによゆうをもとう。"},
+    {jp:"エコバッグを持っていこう。", kana:"えこばっぐをもっていこう。"},
+    {jp:"ゴミは分別して捨てる。", kana:"ごみはぶんべつしてすてる。"},
+    {jp:"ハードディスクが壊れました。", kana:"はーどでぃすくがこわれました。"},
+    {jp:"パスワードは定期的に変えよう。", kana:"ぱすわーどはていきてきにかえよう。"},
+    {jp:"深呼吸して落ち着こう。", kana:"しんこきゅうしておちつこう。"},
+    {jp:"困ったら相談してください。", kana:"こまったらそうだんしてください。"},
+    {jp:"無理をしないで休もう。", kana:"むりをしないでやすもう。"},
+    {jp:"小さな積み重ねが大切だ。", kana:"ちいさなつみかさねがたいせつだ。"},
+  ];
 
-  function promptByIndex(i){
-    const bases = [TRAVEL.OPEN.length, TRAVEL.INTENT.length, TRAVEL.WHAT.length, TRAVEL.DETAILS.length, TRAVEL.DATE.length, TRAVEL.EXTRA.length];
-    const [a,b,c,d,e,f] = mixedRadixPick(i, bases);
-    const open = TRAVEL.OPEN[a];
-    const intent = TRAVEL.INTENT[b];
-    const what = TRAVEL.WHAT[c];
-    const details = TRAVEL.DETAILS[d];
-    const date = TRAVEL.DATE[e];
-    const extra = TRAVEL.EXTRA[f];
-    const core = `${intent} ${what} ${details} ${date}.`;
-    return `${open} ${core} ${extra}?`;
+  // 2) 自然なひらがな短文をテンプレで生成して1000に増やす（読み不要）
+  // ※ 全角入力禁止でも打てるよう、句読点は「、。」(= , . に変換)のみを使う
+  const PLACES = ["こうえん","えき","がっこう","としょかん","すーぱー","びょういん","きっさてん","しょくば","いえ","まち","うみ","やま","かわ"];
+  const TIMES  = ["きょう","あした","きのう","こんしゅう","らいしゅう","いま","さっき","あさ","ひる","よる"];
+  const WEATHER = ["はれ","くもり","あめ","ゆき","かぜがつよい","さむい","あつい"];
+  const ACTIONS_PAST = ["さんぽしました","うんどうしました","べんきょうしました","かいものしました","そうじしました","りょうりしました","れんしゅうしました","きゅうけいしました","しゅくだいをしました","でんわしました"];
+  const ACTIONS_NOW  = ["さんぽします","うんどうします","べんきょうします","かいものします","そうじします","りょうりします","れんしゅうします","きゅうけいします","しゅくだいをします","でんわします"];
+  const EVENTS  = ["でんしゃがおくれました","ばすがこみました","みちにまよいました","つかれました","ねむいです","おなかがすきました","じかんがありません","わすれものをしました","ぱそこんがこわれました","すまほをなくしました"];
+  const REQUESTS = ["しずかにしてください","ゆっくりはなしてください","もういちどいってください","ちょっとまってください","きをつけてください","てつだってください"];
+  const ADVICE = ["てをあらおう","みずをのもう","はやくねよう","あさごはんをたべよう","まどをあけてかんきしよう","でんきをこまめにけそう","ごみをぶんべつしよう","すいぶんほきゅうをわすれずに"];
+  const TOPICS = ["かんきょうほご","けんこう","あんぜん","べんきょう","しごと","そうじ","せいかつ","こうつう","じかん","れんしゅう"];
+  const STATEMENTS = ["たいせつだ","じゅうようだ","ひつようだ","だいじだ","むずかしい","かんたんだ","たのしい"];
+
+  const PHRASES = [];
+  const used = new Set();
+
+  function addPhrase(jp, kana){
+    // kana未指定なら同じ
+    kana = kana ?? jp;
+    const key = `${jp}__${kana}`;
+    if(used.has(key)) return false;
+    used.add(key);
+    PHRASES.push({jp, kana, romaji:kanaToRomaji(kana)});
+    return true;
   }
 
-  // ----- State -----
-  const STORAGE_KEY = "typing_pet_state_travel_only_typewriter_loud_v1";
-  const defaultState = () => ({
-    name: generateName(),
-    createdAt: now(),
-    lastSeen: now(),
-    lv: 1, xp: 0, stage: 0,
-    energy: 0.72, mood: 0.55, glow: 0.45, spikes: 0.25, wobble: 0.35, friendliness: 0.55,
-    trait: "balanced",
-    combo: 0,
-    wpmNow: null, accNow: null,
-    seed: (Math.random()*1e9)|0,
-    log: [],
-    prompts: {},
-    promptIndex: null
-  });
-
-  function generateName(){
-    const a = ["Myo","Nya","Zuo","Kiri","Peko","Vivi","Lumo","Rabi","Mimi","Sora","Dodo","Koko","Noro","Puru","Mogu"];
-    const b = ["blob","mite","ling","core","seed","goo","puff","wisp","morph","bud","nug","sprout","gazer","drift","node"];
-    return pick(a) + pick(b);
+  // base first
+  for(const b of BASE){
+    addPhrase(b.jp, b.kana);
   }
-  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return null; const s = JSON.parse(raw); return (s && typeof s==="object") ? s : null; }catch(e){ return null; } }
-  function saveState(){ try{ state.lastSeen = now(); localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 
-  // ----- Elements -----
-  const cv = $("#cv");
-  const ctx = cv.getContext("2d");
-  const toastEl = $("#toast");
-  const el = {
-    statusPill: $("#statusPill"),
-    petName: $("#petName"),
-    petStage: $("#petStage"),
-    petMood: $("#petMood"),
-    petLv: $("#petLv"),
-    energyBar: $("#energyBar"),
-    promptText: $("#promptText"),
-    typeInput: $("#typeInput"),
-    btnSubmit: $("#btnSubmit"),
-    btnNewPrompt: $("#btnNewPrompt"),
-    btnSnapshot: $("#btnSnapshot"),
-    btnShare: $("#btnShare"),
-    btnReset: $("#btnReset"),
-    wpmNow: $("#wpmNow"),
-    accNow: $("#accNow"),
-    comboNow: $("#comboNow"),
-    traitNow: $("#traitNow"),
-    log: $("#log"),
-  };
+  // templates (ひらがな中心)
+  const TEMPLATES = [
+    () => `${PLACES[rPick(PLACES)]}にいってきました。`,
+    () => `${PLACES[rPick(PLACES)]}で${ACTIONS_PAST[rPick(ACTIONS_PAST)]}。`,
+    () => `${TIMES[rPick(TIMES)]}は${WEATHER[rPick(WEATHER)]}です。`,
+    () => `${EVENTS[rPick(EVENTS)]}。`,
+    () => `${REQUESTS[rPick(REQUESTS)]}。`,
+    () => `${ADVICE[rPick(ADVICE)]}。`,
+    () => `かえってきたら、${ADVICE[rPick(ADVICE)]}。`,
+    () => `わすれものをしないように。`,
+    () => `じかんによゆうをもとう。`,
+    () => `むりをしないでやすもう。`,
+    () => `${TOPICS[rPick(TOPICS)]}は${STATEMENTS[rPick(STATEMENTS)]}。`,
+    () => `きょうは${PLACES[rPick(PLACES)]}へいきます。`,
+    () => `あしたは${PLACES[rPick(PLACES)]}へいこう。`,
+    () => `さっき${PLACES[rPick(PLACES)]}であいました。`,
+    () => `いまから${ACTIONS_NOW[rPick(ACTIONS_NOW)]}。`,
+    () => `すこしきゅうけいしよう。`,
+    () => `ゆっくりいきましょう。`,
+    () => `ていねいにやろう。`,
+    () => `あんぜんをかくにんしよう。`,
+    () => `すまほのじゅうでんをわすれずに。`,
+  ];
 
-  // ----- Toast & Log -----
-  function toast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(()=>toastEl.classList.remove("show"), 1100);
+  // deterministic-ish pick for variety but still "random"
+  let seed = 123456789;
+  function rnd(){
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
   }
-  function pushLog(kind, msg){
-    const item = { t: now(), kind, msg };
-    state.log = state.log || [];
-    state.log.unshift(item);
-    state.log = state.log.slice(0, 60);
-    renderLog();
-    saveState();
+  function rPick(arr){
+    return Math.floor(rnd() * arr.length);
   }
-  function renderLog(){
-    el.log.innerHTML = "";
-    (state.log||[]).forEach(it=>{
-      const div = document.createElement("div");
-      div.className = `logItem ${it.kind||"info"}`;
-      div.innerHTML = `<div class="t">${fmtTime(it.t)}</div><div>${escapeHtml(it.msg)}</div>`;
-      el.log.appendChild(div);
+
+  // fill up to ~1000 with unique sentences
+  let guard = 0;
+  while(PHRASES.length < 1000 && guard < 200000){
+    guard++;
+    const maker = TEMPLATES[rPick(TEMPLATES)];
+    const jp = maker();
+    // ひらがな生成は読み不要なので kana=jp
+    addPhrase(jp, jp);
+  }
+  // fallback: if something went wrong, keep at least base
+  if(PHRASES.length < BASE.length) {
+    PHRASES.length = 0;
+    for(const b of BASE) PHRASES.push({jp:b.jp, kana:b.kana, romaji:kanaToRomaji(b.kana)});
+  }
+
+  // ===== Order / no repeat until full cycle =====
+
+  function makeOrder(){
+    SESSION.order = Array.from({length:PHRASES.length}, (_,i)=>i);
+    // shuffle
+    for(let i=SESSION.order.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [SESSION.order[i], SESSION.order[j]] = [SESSION.order[j], SESSION.order[i]];
+    }
+    SESSION.orderIdx = 0;
+  }
+  makeOrder();
+
+  function nextItem(){
+    if(SESSION.orderIdx >= SESSION.order.length){
+      const last = SESSION.current ? SESSION.current.jp : null;
+      makeOrder();
+      // avoid immediate repeat at cycle boundary
+      if(last && PHRASES[SESSION.order[0]].jp === last && SESSION.order.length>1){
+        [SESSION.order[0], SESSION.order[1]] = [SESSION.order[1], SESSION.order[0]];
+      }
+    }
+    const idx = SESSION.order[SESSION.orderIdx++];
+    return PHRASES[idx];
+  }
+
+  // ===== Virtual keyboard (JIS-ish minimal) =====
+  const KB_ROWS = [
+    // row1
+    [
+      {code:"Digit1", label:"1"}, {code:"Digit2", label:"2"}, {code:"Digit3", label:"3"}, {code:"Digit4", label:"4"},
+      {code:"Digit5", label:"5"}, {code:"Digit6", label:"6"}, {code:"Digit7", label:"7"}, {code:"Digit8", label:"8"},
+      {code:"Digit9", label:"9"}, {code:"Digit0", label:"0"},
+      {code:"Minus", label:"-"},
+      {code:"Equal", label:"^"},
+      {code:"IntlYen", label:"¥"},
+      {code:"Backspace", label:"Back", cls:"backspace wide"}
+    ],
+    // row2
+    [
+      {code:"KeyQ", label:"Q"}, {code:"KeyW", label:"W"}, {code:"KeyE", label:"E"}, {code:"KeyR", label:"R"},
+      {code:"KeyT", label:"T"}, {code:"KeyY", label:"Y"}, {code:"KeyU", label:"U"}, {code:"KeyI", label:"I"},
+      {code:"KeyO", label:"O"}, {code:"KeyP", label:"P"},
+      {code:"BracketLeft", label:"@"},
+      {code:"BracketRight", label:"["},
+      {code:"Enter", label:"Enter", cls:"enter"}
+    ],
+    // row3
+    [
+      {code:"KeyA", label:"A"}, {code:"KeyS", label:"S"}, {code:"KeyD", label:"D"}, {code:"KeyF", label:"F"},
+      {code:"KeyG", label:"G"}, {code:"KeyH", label:"H"}, {code:"KeyJ", label:"J"}, {code:"KeyK", label:"K"},
+      {code:"KeyL", label:"L"},
+      {code:"Semicolon", label:";"},
+      {code:"Quote", label:":"}, // JISでは : がこのへん。簡略表示
+      {code:"Backslash", label:"]"} // 簡略（この記号はほぼ出ないので保険）
+    ],
+    // row4
+    [
+      {code:"ShiftLeft", label:"Shift", cls:"shift"},
+      {code:"KeyZ", label:"Z"}, {code:"KeyX", label:"X"}, {code:"KeyC", label:"C"}, {code:"KeyV", label:"V"},
+      {code:"KeyB", label:"B"}, {code:"KeyN", label:"N"}, {code:"KeyM", label:"M"},
+      {code:"Comma", label:","}, {code:"Period", label:"."}, {code:"Slash", label:"/"},
+      {code:"IntlRo", label:"\\"},
+      {code:"ShiftRight", label:"Shift", cls:"shift"}
+    ],
+    // row5
+    [
+      {code:"Space", label:"", cls:"space"}
+    ]
+  ];
+
+  const keyElsByCode = new Map();
+  function renderKeyboard(){
+    const kb = $("kb");
+    kb.innerHTML = "";
+    KB_ROWS.forEach(row => {
+      const rowEl = document.createElement("div");
+      rowEl.className = "row";
+      row.forEach(k => {
+        const el = document.createElement("div");
+        el.className = "key " + (k.cls || "");
+        el.dataset.code = k.code;
+        if(k.code === "Space"){
+          el.innerHTML = "<span class='sub'>Space</span>";
+        }else{
+          el.textContent = k.label;
+        }
+        rowEl.appendChild(el);
+        keyElsByCode.set(k.code, el);
+      });
+      kb.appendChild(rowEl);
     });
   }
+  renderKeyboard();
 
-  // ----- Pet helpers -----
-  function stageName(stage){ return ["芽生え","ぷるぷる","発光体","多脚体","未知体"][clamp(stage,0,4)]; }
-  function moodName(m){ if(m < 0.25) return "calm"; if(m < 0.55) return "curious"; if(m < 0.80) return "wild"; return "feral"; }
-  function traitFrom(s){
-    const { friendliness, glow, spikes, wobble } = s;
-    if (friendliness > 0.68 && spikes < 0.45) return "gentle";
-    if (glow > 0.70 && friendliness > 0.55) return "radiant";
-    if (spikes > 0.72 && friendliness < 0.50) return "spiky";
-    if (wobble > 0.70) return "jelly";
-    return "balanced";
-  }
-
-  // ----- Init -----
-  let state = loadState() || defaultState();
-  (function migrate(){
-    const d = defaultState();
-    for(const k in d){ if(state[k] === undefined) state[k] = d[k]; }
-    state.log = state.log || [];
-    state.prompts = state.prompts || {};
-    state.energy = clamp(state.energy ?? 0.7, 0, 1);
-    state.mood = clamp(state.mood ?? 0.55, 0, 1);
-    state.glow = clamp(state.glow ?? 0.45, 0, 1);
-    state.spikes = clamp(state.spikes ?? 0.25, 0, 1);
-    state.wobble = clamp(state.wobble ?? 0.35, 0, 1);
-    state.friendliness = clamp(state.friendliness ?? 0.55, 0, 1);
-  })();
-
-  const awayMs = now() - (state.lastSeen || now());
-  if (awayMs > 10_000) {
-    const mins = awayMs / 60000;
-    const rec = clamp(mins * 0.015, 0, 0.18);
-    state.energy = clamp((state.energy ?? 0.7) + rec, 0, 1);
-    state.log.unshift({t: now(), kind:"info", msg:`留守中にエネルギーが少し回復した (+${Math.round(rec*100)}%).`});
-    state.log = state.log.slice(0,60);
-  }
-
-  // ----- Typing session -----
-  let session = { startedAt: null, lastKeyAt: null, typed: "", target: "", idle: true };
-  let composing = false;
-  let lastKeyKind = "char";
-
-  // ----- Prompt rendering -----
-  let promptChars = [];
-  function renderPromptChars(text){
-    el.promptText.innerHTML = "";
-    promptChars = [];
-    for(let i=0;i<text.length;i++){
-      const span = document.createElement("span");
-      span.className = "ch todo";
-      const ch = text[i];
-      span.textContent = (ch === " ") ? "\u00A0" : ch;
-      el.promptText.appendChild(span);
-      promptChars.push(span);
+  function clearHL(){
+    for(const el of keyElsByCode.values()){
+      el.classList.remove("hl");
     }
-    updatePromptHighlight("");
   }
-  function updatePromptHighlight(typed){
-    const target = session.target || "";
-    const tLen = target.length;
-    const uLen = typed.length;
-
-    const min = Math.min(tLen, promptChars.length);
-    for(let i=0;i<min;i++){
-      const sp = promptChars[i];
-      sp.classList.remove("ok","bad","todo","caret");
-      if(i < uLen){
-        sp.classList.add(typed[i] === target[i] ? "ok" : "bad");
-      }else{
-        sp.classList.add("todo");
-      }
+  function clearPressed(){
+    for(const el of keyElsByCode.values()){
+      el.classList.remove("pressed");
     }
-    const caretPos = clamp(uLen, 0, Math.max(0, tLen-1));
-    if(promptChars[caretPos]) promptChars[caretPos].classList.add("caret");
-  }
-  function shakePrompt(){
-    el.promptText.classList.remove("shake");
-    void el.promptText.offsetWidth;
-    el.promptText.classList.add("shake");
   }
 
-  // ----- UI -----
-  function updateHeaderUI(){
-    $("#petName").textContent = state.name;
-    $("#petStage").textContent = stageName(state.stage);
-    $("#petMood").textContent = moodName(state.mood);
-    $("#petLv").textContent = state.lv;
-    $("#energyBar").style.width = `${Math.round(state.energy*100)}%`;
-
-    $("#wpmNow").textContent = state.wpmNow == null ? "-" : String(state.wpmNow);
-    $("#accNow").textContent = state.accNow == null ? "-" : String(Math.round(state.accNow*100));
-    $("#comboNow").textContent = String(state.combo || 0);
-
-    state.trait = traitFrom(state);
-    $("#traitNow").textContent = state.trait;
-
-    $("#statusPill").textContent = session.idle ? "idle" : "awake";
-  }
-
-  function setPrompt(index=null){
-    const idx = (index == null) ? nextPromptIndex(state) : index;
-    state.promptIndex = idx;
-    session.target = promptByIndex(idx);
-
-    renderPromptChars(session.target);
-
-    el.typeInput.value = "";
-    session.typed = "";
-    session.startedAt = null;
-    session.lastKeyAt = null;
-    session.idle = true;
-
-    updateHeaderUI();
-    saveState();
-  }
-
-  // ----- Metrics -----
-  function computeAccuracy(typed, target){
-    const n = Math.max(typed.length, target.length);
-    if(n === 0) return 1;
-    let same = 0;
-    for(let i=0;i<n;i++){ if(typed[i] === target[i]) same++; }
-    return same / n;
-  }
-  function computeWPM(typed, durationMs){
-    if(!durationMs || durationMs <= 0) return 0;
-    const minutes = durationMs / 60000;
-    return (typed.length / 5) / minutes;
-  }
-  function levelNeed(lv){
-    return Math.round(24 + lv*10 + Math.pow(lv,1.25)*5);
-  }
-
-  function rewardFrom(wpm, acc){
-    const w = clamp(wpm / 90, 0, 1);
-    const a = clamp((acc - 0.6) / 0.4, 0, 1);
-    const quality = 0.55*w + 0.45*a;
-
-    const baseXp = 6 + Math.round(quality * 18);
-    const combo = state.combo || 0;
-    const comboBonus = Math.round(clamp(combo,0,15) * 0.9);
-    const xpGain = baseXp + comboBonus;
-
-    const energyCost = 0.04 + (1-a)*0.07 + w*0.02;
-
-    const moodDelta = (w*0.10) - (a*0.08);
-    const glowDelta = (quality*0.08) - (Math.abs(w-a)*0.03);
-    const spikeDelta = (1-a)*0.12 - a*0.02;
-    const wobbleDelta = (w*0.05) + (Math.abs(0.5-(w*0.5+a*0.5))*0.03);
-    const friendlyDelta = (a*0.07) - (w*0.03) - ((1-a)*0.03);
-
-    let kind = "info";
-    let msg = "";
-    if(acc >= 0.95 && wpm >= 50){ kind = "good"; msg = "きれいに打てた！ 生物が嬉しそうに光った。"; }
-    else if(acc < 0.75){ kind = "bad"; msg = "ミスが多い…生物がトゲトゲしてきた。"; }
-    else if(wpm < 25){ kind = "info"; msg = "ゆっくりでもOK。生物は落ち着いて観察している。"; }
-    else { kind = "good"; msg = "いい調子。少し成長した。"; }
-
-    return {
-      xpGain,
-      energyDelta: -energyCost,
-      moodDelta, glowDelta, spikeDelta, wobbleDelta, friendlyDelta,
-      msg, kind
+  // Map next character -> KeyboardEvent.code (JIS minimal)
+  function charToCode(ch){
+    if(!ch) return null;
+    if(ch === " ") return "Space";
+    const c = ch.toLowerCase();
+    if(c >= "a" && c <= "z") return "Key" + c.toUpperCase();
+    if(c >= "0" && c <= "9") return "Digit" + c;
+    const map = {
+      "-":"Minus",
+      "^":"Equal",
+      "¥":"IntlYen","\\":"IntlRo",
+      ",":"Comma",".":"Period","/":"Slash",
+      ";":"Semicolon",":":"Quote",
+      "@":"BracketLeft","[":"BracketRight",
+      "]":"Backslash",
+      "'":"Quote",
+      "_":"IntlRo",
+      "!":"Digit1",
+      "?":"Slash",
+      ".":"Period",
     };
+    return map[ch] || map[c] || null;
   }
 
-  function applyReward(wpm, acc){
-    const r = rewardFrom(wpm, acc);
-    const pass = (acc >= 0.86);
-    state.combo = pass ? (state.combo||0) + 1 : 0;
+  function highlightNextKey(){
+    clearHL();
+    if(state === STATE.IDLE){
+      const el = keyElsByCode.get("Space");
+      if(el) el.classList.add("hl");
+      return;
+    }
+    if(!SESSION.current) return;
+    const target = SESSION.current.romajiNorm;
+    const pos = SESSION.typed.length;
+    const next = target[pos] || "";
+    const code = charToCode(next);
+    if(code){
+      const el = keyElsByCode.get(code);
+      if(el) el.classList.add("hl");
+    }
+  }
 
-    state.xp += r.xpGain;
-    state.energy = clamp(state.energy + r.energyDelta, 0, 1);
-    state.mood = clamp(state.mood + r.moodDelta, 0, 1);
-    state.glow = clamp(state.glow + r.glowDelta, 0, 1);
-    state.spikes = clamp(state.spikes + r.spikeDelta, 0, 1);
-    state.wobble = clamp(state.wobble + r.wobbleDelta, 0, 1);
-    state.friendliness = clamp(state.friendliness + r.friendlyDelta, 0, 1);
+  function pressFlashByCode(code){
+    if(!code) return;
+    const el = keyElsByCode.get(code);
+    if(!el) return;
+    el.classList.add("pressed");
+    setTimeout(()=>el.classList.remove("pressed"), 120);
+  }
 
-    state.wpmNow = Math.round(wpm);
-    state.accNow = acc;
-    state.trait = traitFrom(state);
+  // ===== Problem / render =====
+  function setProblem(item){
+    SESSION.current = {
+      jp: item.jp,
+      kana: item.kana,
+      romaji: item.romaji,
+      romajiNorm: normalizeTarget(item.romaji).toLowerCase()
+    };
+    SESSION.typed = "";
+    SESSION.mismatch = false;
+    $("jpText").textContent = item.jp;
+    $("kanaText").textContent = toHira(item.kana);
+    renderRomajiLine();
+    highlightNextKey();
+  }
 
-    pushLog(r.kind, `${r.msg} (+XP ${r.xpGain}, Acc ${Math.round(acc*100)}%, WPM ${Math.round(wpm)})`);
+  function renderRomajiLine(){
+    const target = SESSION.current ? SESSION.current.romajiNorm : "";
+    const typed = SESSION.typed;
+    let html = "";
+    for(let i=0;i<target.length;i++){
+      const ch = target[i].toUpperCase();
+      if(i < typed.length){
+        const ok = typed[i] === target[i];
+        html += `<span class="${ok ? "typedGood":"typedBad"}">${escapeHtml(ch)}</span>`;
+      }else{
+        html += `<span class="rest">${escapeHtml(ch)}</span>`;
+      }
+    }
+    $("romajiLine").innerHTML = html || "—";
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 
-    while(state.xp >= levelNeed(state.lv)){
-      state.xp -= levelNeed(state.lv);
-      state.lv++;
-      pushLog("good", `レベルアップ！ Lv ${state.lv} になった。`);
-      state.energy = clamp(state.energy + 0.12, 0, 1);
+  // ===== Timer =====
+  function updateTimerUI(){
+    const mm = Math.floor(SESSION.leftSec / 60);
+    const ss = SESSION.leftSec % 60;
+    $("mm").textContent = String(mm);
+    $("ss").textContent = String(ss).padStart(2,"0");
+    const ratio = Math.max(0, Math.min(1, SESSION.leftSec / SESSION.totalSec));
+    $("bar").style.transform = `scaleX(${ratio})`;
+  }
 
-      const newStage = Math.min(4, Math.floor((state.lv-1)/4));
-      if(newStage !== state.stage){
-        state.stage = newStage;
-        pushLog("good", `進化！ 姿が「${stageName(state.stage)}」になった。`);
+  function startTimer(){
+    if(SESSION.timerId) return;
+    SESSION.startedAt = Date.now();
+    SESSION.leftSec = SESSION.totalSec;
+    updateTimerUI();
+    SESSION.timerId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - SESSION.startedAt)/1000);
+      SESSION.leftSec = Math.max(0, SESSION.totalSec - elapsed);
+      updateTimerUI();
+      if(SESSION.leftSec <= 0){
+        finish();
+      }else{
+        updateSpeed();
+      }
+    }, 200);
+  }
+
+  function finish(){
+    if(state === STATE.DONE) return;
+    state = STATE.DONE;
+    if(SESSION.timerId){ clearInterval(SESSION.timerId); SESSION.timerId=null; }
+    // show idle message with result summary
+    $("taskView").style.display = "none";
+    $("idleView").style.display = "";
+    $("idleView").innerHTML = `<div class="hint">終了しました。</div>
+      <div class="subhint">もう一度やるには、スペースキーを押してください。</div>`;
+    highlightNextKey();
+  }
+
+  function resetAll(){
+    if(SESSION.timerId){ clearInterval(SESSION.timerId); SESSION.timerId=null; }
+    state = STATE.IDLE;
+    SESSION.leftSec = SESSION.totalSec;
+    SESSION.startedAt = 0;
+    SESSION.startedTypingAt = 0;
+    SESSION.ok = 0;
+    SESSION.miss = 0;
+    SESSION.streak = 0;
+    SESSION.bestStreak = 0;
+    SESSION.charCount = 0;
+    $("charCount").textContent = "0";
+    $("statOk").textContent = "0";
+    $("statMiss").textContent = "0";
+    $("statAcc").textContent = "—";
+    $("statStreak").textContent = "0";
+    $("statSpd").textContent = "—";
+    updateTimerUI();
+    $("idleView").style.display = "";
+    $("idleView").innerHTML = `<div class="hint">スペースキーを押して開始します。</div>
+      <div class="subhint">（日本語入力モードはOFFにして下さい。）</div>`;
+    $("taskView").style.display = "none";
+    setProblem(nextItem()); // prepare next
+    highlightNextKey();
+  }
+
+  // ===== Scoring / speed =====
+  function updateAcc(){
+    const total = SESSION.ok + SESSION.miss;
+    if(total === 0) { $("statAcc").textContent = "—"; return; }
+    const acc = Math.round((SESSION.ok / total) * 100);
+    $("statAcc").textContent = acc + "%";
+  }
+  function updateSpeed(){
+    // chars per minute based on typed characters (romaji) since start typing
+    if(!SESSION.startedTypingAt){ $("statSpd").textContent = "—"; return; }
+    const elapsedMin = (Date.now() - SESSION.startedTypingAt) / 60000;
+    if(elapsedMin <= 0){ $("statSpd").textContent = "—"; return; }
+    const cpm = Math.round(SESSION.charCount / elapsedMin);
+    $("statSpd").textContent = cpm + " cpm";
+  }
+
+  function onCorrect(){
+    SESSION.ok += 1;
+    SESSION.streak += 1;
+    SESSION.bestStreak = Math.max(SESSION.bestStreak, SESSION.streak);
+    $("statOk").textContent = String(SESSION.ok);
+    $("statStreak").textContent = `${SESSION.streak}`;
+    updateAcc();
+    // next
+    setProblem(nextItem());
+  }
+
+  function onMiss(){
+    SESSION.miss += 1;
+    SESSION.streak = 0;
+    $("statMiss").textContent = String(SESSION.miss);
+    $("statStreak").textContent = "0";
+    updateAcc();
+  }
+
+  // ===== Input handling (manual buffer; avoids IME double input) =====
+  function ensureRunningStart(){
+    if(state === STATE.IDLE || state === STATE.DONE){
+      state = STATE.RUN;
+      $("idleView").style.display = "none";
+      $("taskView").style.display = "";
+      if(!SESSION.current) setProblem(nextItem());
+      startTimer();
+      // first actual typing moment
+      if(!SESSION.startedTypingAt) SESSION.startedTypingAt = Date.now();
+      highlightNextKey();
+    }
+  }
+
+  function handleCharInput(ch){
+    if(state !== STATE.RUN) return;
+    const target = SESSION.current.romajiNorm;
+    const pos = SESSION.typed.length;
+    if(pos >= target.length) return;
+
+    // normalize long vowel input too
+    if(ch === "ー" || ch === "ｰ") ch = "-";
+
+    // accept only ascii printable and space, comma, period, slash, hyphen, apostrophe
+    if(ch.length !== 1) return;
+    const code = ch.charCodeAt(0);
+    if(!(code === 32 || (code >= 33 && code <= 126))) return;
+
+    // letters: force lowercase for compare
+    const add = (/[A-Za-z]/.test(ch)) ? ch.toLowerCase() : ch;
+
+    // update pressed flash based on char
+    pressFlashByCode(charToCode(add));
+
+    // apply
+    SESSION.typed += add;
+    SESSION.charCount += 1;
+    $("charCount").textContent = String(SESSION.charCount);
+
+    // mismatch detection (only count miss once per problem, like many typing games)
+    if(add !== target[pos]){
+      if(!SESSION.mismatch){
+        SESSION.mismatch = true;
+        onMiss();
       }
     }
 
-    if(state.energy <= 0.02) pushLog("bad", "疲れ切った…少し休ませてあげよう（放置で回復）。");
-    saveState();
-  }
+    renderRomajiLine();
+    highlightNextKey();
+    updateSpeed();
 
-  // ----- IME events -----
-  el.typeInput.addEventListener("compositionstart", () => {
-    composing = true;
-    toast("IME変換中… 英数入力に切り替えてください");
-  });
-  el.typeInput.addEventListener("compositionend", () => {
-    composing = false;
-    session.typed = el.typeInput.value;
-    updatePromptHighlight(session.typed);
-  });
-
-  // ----- Input events -----
-  function startSessionIfNeeded(){
-    if(session.startedAt == null){
-      session.startedAt = now();
-      session.idle = false;
-      updateHeaderUI();
+    if(SESSION.typed.length === target.length){
+      if(!SESSION.mismatch){
+        onCorrect();
+      }else{
+        // mismatch: still move on when fully typed (to keep flow)
+        setProblem(nextItem());
+      }
     }
   }
 
-  el.typeInput.addEventListener("keydown", (e) => {
-    TypeSound.unlock();
+  function handleBackspace(){
+    if(state !== STATE.RUN) return;
+    if(SESSION.typed.length === 0) return;
+    SESSION.typed = SESSION.typed.slice(0, -1);
+    renderRomajiLine();
+    highlightNextKey();
+  }
 
-    if(e.key === "Enter"){ e.preventDefault(); submit(); return; }
-    if(e.key === "Escape"){
+  window.addEventListener("keydown", (e) => {
+    // disable backquote
+    if(isBackquoteKey(e)){
       e.preventDefault();
-      el.typeInput.value = "";
-      session.typed = "";
-      updatePromptHighlight("");
-      toast("リセット");
       return;
     }
 
-    startSessionIfNeeded();
-    session.lastKeyAt = now();
-
-    if(e.isComposing || composing) return;
-
-    if(e.key === "Backspace") lastKeyKind = "backspace";
-    else if(e.key === " ") lastKeyKind = "space";
-    else if(e.key.length === 1) lastKeyKind = "char";
-    else lastKeyKind = "other";
-  });
-
-  el.typeInput.addEventListener("input", (e) => {
-    startSessionIfNeeded();
-    session.lastKeyAt = now();
-
-    session.typed = el.typeInput.value;
-
-    if(e.isComposing || composing) return;
-
-    updatePromptHighlight(session.typed);
-
-    const target = session.target || "";
-    if(session.typed.length > target.length) shakePrompt();
-
-    const inputType = e.inputType || "";
-    if(inputType.startsWith("delete")) TypeSound.type("backspace");
-    else if(lastKeyKind === "space") TypeSound.type("space");
-    else if(lastKeyKind === "char") TypeSound.type("char");
-  });
-
-  window.addEventListener("pointerdown", () => TypeSound.unlock(), { once:true, passive:true });
-  window.addEventListener("touchstart", () => TypeSound.unlock(), { once:true, passive:true });
-  window.addEventListener("keydown", () => TypeSound.unlock(), { once:true });
-
-  function submit(){
-    const typed = (el.typeInput.value || "");
-    const target = (session.target || "");
-    if(!target){ setPrompt(null); return; }
-    if(typed.length === 0){ toast("入力して Enter"); return; }
-
-    const endAt = now();
-    const startAt = session.startedAt ?? (endAt - 1200);
-    const durationMs = Math.max(200, endAt - startAt);
-    const acc = computeAccuracy(typed, target);
-    const wpm = computeWPM(typed, durationMs);
-
-    applyReward(wpm, acc);
-
-    toast(`${(acc >= 0.86) ? "OK" : "MISS"}  Acc ${Math.round(acc*100)}%  WPM ${Math.round(wpm)}`);
-    setPrompt(null);
-
-    if(state.energy < 0.18) pushLog("bad", "ちょっと疲れてる…休憩しながら育てよう。");
-    else if(state.combo >= 5) pushLog("good", `コンボ ${state.combo}！ どんどん学習している。`);
-  }
-
-  // ----- Buttons -----
-  el.btnNewPrompt.addEventListener("click", () => { setPrompt(null); pushLog("info", "お題を変えた。新しい旅の予定だ。"); TypeSound.unlock(); });
-  el.btnSubmit.addEventListener("click", () => { TypeSound.unlock(); submit(); });
-
-  el.btnSnapshot.addEventListener("click", () => {
-    const a = document.createElement("a");
-    a.download = `${state.name}_lv${state.lv}.png`;
-    a.href = cv.toDataURL("image/png");
-    a.click();
-    toast("PNG保存");
-    pushLog("info", "観察記録（PNG）を保存した。");
-    TypeSound.unlock();
-  });
-
-  el.btnShare.addEventListener("click", async () => {
-    const text = [
-      `Typing Pet (travel booking)`,
-      `Name: ${state.name}`,
-      `Lv: ${state.lv} / Stage: ${stageName(state.stage)} / Trait: ${state.trait}`,
-      `Energy: ${Math.round(state.energy*100)}% / Mood: ${moodName(state.mood)}`,
-      `Last: Acc ${state.accNow==null ? "-" : Math.round(state.accNow*100)+"%"} , WPM ${state.wpmNow==null ? "-" : state.wpmNow}`,
-      `#TypingPet`
-    ].join("\n");
-    try{
-      await navigator.clipboard.writeText(text);
-      toast("コピーしました");
-    }catch(e){
-      const ta = document.createElement("textarea");
-      ta.value = text; document.body.appendChild(ta);
-      ta.select(); document.execCommand("copy");
-      document.body.removeChild(ta);
-      toast("コピーしました");
+    // Start with Space (idle/done)
+    if((state === STATE.IDLE || state === STATE.DONE) && e.code === "Space"){
+      e.preventDefault();
+      resetAll();
+      ensureRunningStart();
+      return;
     }
-    pushLog("info", "シェア文をコピーした。");
-    TypeSound.unlock();
-  });
 
-  el.btnReset.addEventListener("click", () => {
-    if(!confirm("本当に初期化しますか？（この端末の育成データが消えます）")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    state = defaultState();
-    stars = null;
-    setPrompt(null);
-    renderLog();
-    updateHeaderUI();
-    pushLog("info", "新しい個体が誕生した。");
-    toast("初期化しました");
-    TypeSound.unlock();
-  });
-
-  // ----- Idle recovery -----
-  setInterval(() => {
-    const idleFor = session.lastKeyAt ? (now() - session.lastKeyAt) : 999999;
-    const wasIdle = session.idle;
-    session.idle = idleFor > 7000;
-    if(session.idle && !wasIdle) pushLog("info", "生物は休憩モードに入った。");
-    if(session.idle){
-      state.energy = clamp(state.energy + 0.006, 0, 1);
-      state.mood = clamp(state.mood - 0.004, 0, 1);
-      state.glow = clamp(state.glow + 0.002, 0, 1);
-      saveState();
+    if(state !== STATE.RUN){
+      // ignore other keys
+      highlightNextKey();
+      return;
     }
-    updateHeaderUI();
-  }, 1200);
 
-  // ----- Canvas drawing -----
-  let t0 = now();
-  let stars = null;
+    // prevent default for control keys to avoid scrolling etc
+    if(e.code === "Space") e.preventDefault();
 
-  function resizeCanvasToDisplaySize(){
-    const rect = cv.getBoundingClientRect();
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    const w = Math.round(rect.width * dpr);
-    const h = Math.round(rect.height * dpr);
-    if(cv.width !== w || cv.height !== h){
-      cv.width = w; cv.height = h;
-      stars = null;
+    if(e.code === "Backspace"){
+      e.preventDefault();
+      pressFlashByCode("Backspace");
+      handleBackspace();
+      return;
     }
-  }
-
-  function initStars(W,H){
-    const count = Math.floor((W*H)/18000);
-    stars = [];
-    const seed = (state.seed||123456) ^ hash32(state.name);
-    let x = seed;
-    const rnd = () => (x = (x*1664525 + 1013904223)>>>0) / 4294967296;
-    for(let i=0;i<count;i++){
-      stars.push({ x:rnd()*W, y:rnd()*H*0.9, r:0.6+rnd()*1.8, a:0.25+rnd()*0.55, s:0.15+rnd()*0.55 });
+    if(e.code === "Enter"){
+      // Enter is ignored (Benesse-like)
+      e.preventDefault();
+      pressFlashByCode("Enter");
+      return;
     }
-  }
 
-  function drawStars(W,H,t){
-    if(!stars) initStars(W,H);
-    ctx.save();
-    for(const st of stars){
-      const tw = 0.5 + 0.5*Math.sin(t*st.s + st.x*0.01);
-      ctx.globalAlpha = st.a * (0.55 + tw*0.45);
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r*(0.85+tw*0.35), 0, Math.PI*2);
-      ctx.fill();
+    // Ignore IME "Process"
+    if(e.key === "Process" || e.isComposing) return;
+
+    // Append printable key
+    if(e.key && e.key.length === 1){
+      handleCharInput(e.key);
     }
-    ctx.restore();
-  }
+  }, {passive:false});
 
-  function drawEye(x, y, s, blink, jitter){
-    ctx.save();
-    ctx.translate(x + (Math.sin((now()-t0)/1000*7 + x)*jitter), y);
-    ctx.globalAlpha = 0.92;
-    ctx.fillStyle = "rgba(245,250,255,0.95)";
-    ctx.beginPath();
-    ctx.ellipse(0,0, s*1.05, s*0.95*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    const mood = state.mood;
-    const px = Math.sin((now()-t0)/1000*1.4 + x)* (2 + mood*3);
-    const py = Math.cos((now()-t0)/1000*1.2 + x)* (1 + mood*2);
-    ctx.fillStyle = "rgba(10,16,30,0.9)";
-    ctx.beginPath();
-    ctx.ellipse(px, py, s*0.35, s*0.35*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = `rgba(123,240,255,${0.7*state.glow+0.15})`;
-    ctx.beginPath();
-    ctx.ellipse(-s*0.22, -s*0.22, s*0.16, s*0.16*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
+  $("btnEnd").addEventListener("click", () => finish());
 
-  function drawFeelers(R, t, mood, energy){
-    ctx.save();
-    ctx.globalAlpha = 0.55 + state.glow*0.35;
-    ctx.strokeStyle = `rgba(181,255,123,${0.25 + state.glow*0.25})`;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    const n = 2 + Math.floor(mood*2);
-    for(let i=0;i<n;i++){
-      const ang = (-Math.PI/2) + (i-(n-1)/2)*0.45;
-      const len = R*(0.75 + energy*0.25);
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(ang)*R*0.55, Math.sin(ang)*R*0.55);
-      const cx = Math.cos(ang)*len*0.55 + Math.sin(t*2 + i)*R*0.15;
-      const cy = Math.sin(ang)*len*0.55 - Math.cos(t*2 + i)*R*0.10;
-      const ex = Math.cos(ang)*len + Math.sin(t*3 + i)*R*0.12;
-      const ey = Math.sin(ang)*len - Math.cos(t*2.5 + i)*R*0.12;
-      ctx.quadraticCurveTo(cx,cy,ex,ey);
-      ctx.stroke();
-      ctx.fillStyle = `rgba(123,240,255,${0.22+state.glow*0.28})`;
-      ctx.beginPath();
-      ctx.arc(ex,ey, 5+state.glow*4, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
+  // initial prepare
+  setProblem(nextItem());
+  updateTimerUI();
+  highlightNextKey();
 
-  function drawLegs(R, t, mood, energy){
-    ctx.save();
-    ctx.globalAlpha = 0.40 + state.glow*0.25;
-    ctx.strokeStyle = `rgba(255,255,255,${0.18 + state.glow*0.20})`;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    const legs = 4 + Math.floor(mood*6);
-    for(let i=0;i<legs;i++){
-      const side = (i%2===0)? -1 : 1;
-      const row = Math.floor(i/2);
-      const y = lerp(-R*0.05, R*0.40, row / Math.max(1,(legs/2)-1));
-      const x = side * lerp(R*0.55, R*0.85, row / Math.max(1,(legs/2)-1));
-      const kick = Math.sin(t* (3.5 + mood*2) + i)* (8 + energy*8);
-      ctx.beginPath();
-      ctx.moveTo(x*0.65, y);
-      ctx.quadraticCurveTo(x*1.02 + kick*0.35*side, y+R*0.25, x*1.10 + kick*0.55*side, y+R*0.40);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function drawBubbles(R, t, glow){
-    ctx.save();
-    ctx.globalAlpha = 0.20 + glow*0.30;
-    for(let i=0;i<8;i++){
-      const ang = (i/8)*Math.PI*2 + t*0.25;
-      const rr = R*(0.65 + Math.sin(t*0.9+i)*0.06);
-      const x = Math.cos(ang)*rr*0.7;
-      const y = Math.sin(ang)*rr*0.5 - R*0.15;
-      ctx.fillStyle = `rgba(123,240,255,${0.10 + glow*0.22})`;
-      ctx.beginPath();
-      ctx.arc(x,y, 6 + Math.sin(t*2+i)*2, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawSparkles(R, t, glow){
-    ctx.save();
-    ctx.globalAlpha = 0.25 + glow*0.45;
-    for(let i=0;i<14;i++){
-      const ang = (i/14)*Math.PI*2 + t*0.35;
-      const r = R*(1.05 + Math.sin(t*0.8+i)*0.08);
-      const x = Math.cos(ang)*r*0.85;
-      const y = Math.sin(ang)*r*0.55 - R*0.05;
-      const s = 1.5 + glow*2.2 + Math.max(0, Math.sin(t*3 + i))*1.8;
-      ctx.strokeStyle = `rgba(181,255,123,${0.12 + glow*0.18})`;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(x-s,y);
-      ctx.lineTo(x+s,y);
-      ctx.moveTo(x,y-s);
-      ctx.lineTo(x,y+s);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function draw(){
-    const t = (now() - t0)/1000;
-    resizeCanvasToDisplaySize();
-    const W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-
-    drawStars(W,H,t);
-
-    const floorY = H*0.76;
-    const glow = state.glow;
-
-    // floor glow
-    ctx.save();
-    ctx.globalAlpha = 0.35 + glow*0.35;
-    const grd = ctx.createRadialGradient(W*0.5, floorY, 10, W*0.5, floorY, W*0.55);
-    grd.addColorStop(0, `rgba(123,240,255,${0.32+glow*0.25})`);
-    grd.addColorStop(0.5, `rgba(181,255,123,${0.10+glow*0.18})`);
-    grd.addColorStop(1, `rgba(0,0,0,0)`);
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.ellipse(W*0.5, floorY, W*0.33, H*0.11, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    const stage = state.stage;
-    const mood = state.mood;
-    const energy = state.energy;
-    const wobble = state.wobble;
-
-    const sizeBase = lerp(58, 120, clamp((state.lv-1)/18, 0, 1));
-    const sizeStage = [0.80, 0.95, 1.05, 1.12, 1.18][stage];
-    const R = sizeBase * sizeStage;
-
-    const centerX = W*0.5;
-    const centerY = H*0.54;
-
-    const awake = !session.idle;
-    const bob = (Math.sin(t* (awake? 3.4: 1.2)) * (8 + wobble*10)) * (0.35 + energy*0.65);
-    const sway = Math.sin(t* (awake? 2.2: 0.9)) * (10 + wobble*14) * (0.25 + energy*0.75);
-
-    const hue1 = 185 + glow*35 + mood*18;
-    const hue2 = 105 + glow*20 - mood*10;
-    const alpha = 0.82;
-
-    // shadow
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.beginPath();
-    ctx.ellipse(centerX + sway*0.18, floorY+10, R*1.05, R*0.28, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(centerX + sway, centerY + bob);
-
-    const deform = (0.10 + wobble*0.18) * (awake? 1.0 : 0.6);
-    const pulse = 1 + Math.sin(t* (awake? 5.0: 2.0)) * deform * (0.35 + energy*0.65);
-    ctx.scale(pulse, 1/pulse);
-
-    const bodyPath = new Path2D();
-    const lobes = 6 + stage*2;
-    const sp = state.spikes;
-    for(let i=0;i<=360;i+=4){
-      const rad = (i*Math.PI/180);
-      const wave = Math.sin(rad*lobes + t*(awake? 2.2: 0.9)) * (0.06 + wobble*0.10);
-      const spike = Math.max(0, Math.sin(rad*(lobes*0.5) + t*1.3)) * sp * 0.14;
-      const r = R * (1 + wave + spike);
-      const x = Math.cos(rad)*r;
-      const y = Math.sin(rad)*r*0.92;
-      if(i===0) bodyPath.moveTo(x,y); else bodyPath.lineTo(x,y);
-    }
-    bodyPath.closePath();
-
-    const g = ctx.createRadialGradient(0,-R*0.35, 10, 0,0, R*1.4);
-    g.addColorStop(0, `hsla(${hue1}, 90%, 70%, ${alpha})`);
-    g.addColorStop(0.55, `hsla(${lerp(hue1,hue2,0.55)}, 85%, 56%, ${alpha})`);
-    g.addColorStop(1, `hsla(${hue2}, 80%, 22%, ${0.95})`);
-    ctx.fillStyle = g;
-    ctx.fill(bodyPath);
-
-    ctx.save();
-    ctx.globalAlpha = 0.35 + glow*0.45;
-    ctx.strokeStyle = `rgba(123,240,255,${0.25+glow*0.25})`;
-    ctx.lineWidth = 2.2;
-    ctx.stroke(bodyPath);
-    ctx.restore();
-
-    // eyes & mouth
-    const eyeY = -R*0.15 + bob*0.08;
-    const eyeSpread = lerp(R*0.28, R*0.42, stage/4);
-    const eyeSize = lerp(7, 14, clamp((state.lv-1)/18,0,1)) * (0.85 + energy*0.4);
-    const blink = (Math.sin(t* (awake? 6.0: 2.2)) > 0.92) ? 0.15 : 1.0;
-    const jitter = (awake? 1: 0) * (mood*2.0);
-    drawEye(-eyeSpread, eyeY, eyeSize, blink, jitter);
-    drawEye(+eyeSpread, eyeY, eyeSize, blink, jitter);
-
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.strokeStyle = `rgba(0,0,0,0.45)`;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    const smile = lerp(-0.25, 0.35, state.friendliness);
-    ctx.beginPath();
-    ctx.arc(0, R*0.14, R*0.22, Math.PI*(0.20+smile*0.15), Math.PI*(0.80-smile*0.15), false);
-    ctx.stroke();
-    ctx.restore();
-
-    if(stage >= 3) drawLegs(R, t, mood, energy);
-    else if(stage >= 2) drawFeelers(R, t, mood, energy);
-    else if(stage >= 1) drawBubbles(R, t, glow);
-
-    drawSparkles(R, t, glow);
-
-    ctx.restore();
-    requestAnimationFrame(draw);
-  }
-
-  // ----- Boot -----
-  function boot(){
-    renderLog();
-    updateHeaderUI();
-    setPrompt(null);
-    requestAnimationFrame(draw);
-    setTimeout(() => el.typeInput.focus(), 120);
-    saveState();
-  }
-
-  boot();
 })();
 </script>
 </body>
