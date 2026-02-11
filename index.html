@@ -1,1219 +1,706 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>ローマ字タイピング（5分）</title>
-<style>
-  :root{
-    --bg:#e5e7eb;
-    --bar:#4b5563;
-    --accent:#6b7280;
-    --accent2:#f59e0b;
-    --text:#111827;
-    --muted:#6b7280;
-    --key:#f9fafb;
-    --keyBorder:#d1d5db;
-    --keyShadow:0 1px 0 rgba(0,0,0,.06);
-    --hl:#2563eb;
-    --hl2:#f59e0b;
-    --good:#2563eb;
-    --bad:#dc2626;
-    --kbScale:1;
-  }
-*{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
-    background:var(--bg);
-    color:var(--text);
-  }
-  .topbar{
-    height:56px;
-    background:var(--bar);
-    color:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
-  }
-  .topbar .title{
-    font-weight:700;
-    letter-spacing:.02em;
-    white-space:nowrap;
-    font-size:16px;
-  }
-  .topbar .right{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    white-space:nowrap;
-    white-space:nowrap;
-  }
-  .timerWrap{
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .timerLabel{opacity:.95;font-weight:700}
-  .progress{
-    width:180px;
-    height:12px;
-    background:rgba(255,255,255,.25);
-    border-radius:999px;
-    overflow:hidden;
-  }
-  .progress > div{
-    height:100%;
-    width:100%;
-    background:#66d100; /* benesseっぽい緑 */
-    transform-origin:left;
-    transform:scaleX(1);
-  }
-  .timeText{
-    font-weight:800;
-    font-size:28px;
-    letter-spacing:.03em;
-  }
-  .endBtn{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding:10px 14px;
-    border-radius:999px;
-    border:none;
-    background:var(--accent2);
-    color:#fff;
-    font-weight:800;
-    cursor:pointer;
-  }
-  .endBtn:active{transform:translateY(1px)}
-  .endIcon{
-    width:22px;height:22px;border-radius:50%;
-    background:#fff; color:var(--accent2);
-    display:grid; place-items:center;
-    font-weight:900; line-height:1;
-  }
-
-  .wrap{
-    max-width:1100px;
-    margin:0 auto;
-    padding:clamp(14px, 3.2vw, 32px) clamp(12px, 2.8vw, 16px) clamp(20px, 4vw, 40px);
-  }
-
-  .countBadge{
-    display:inline-flex;
-    border-radius:6px;
-    overflow:hidden;
-    box-shadow:0 1px 0 rgba(0,0,0,.06);
-    margin:0 auto 22px;
-  }
-  .countBadge .label{
-    background:#bfe6ff;
-    padding:10px 18px;
-    font-weight:800;
-    color:#004d75;
-  }
-  .countBadge .val{
-    background:#eee;
-    padding:10px 18px;
-    min-width:64px;
-    text-align:right;
-    font-weight:900;
-    color:#ff6a00;
-  }
-
-  .center{
-    text-align:center;
-    margin-top:8px;
-  }
-  .jp{
-    font-size:clamp(28px, 4.5vw, 44px);
-    font-weight:800;
-    color:#0a84ff;
-    line-height:1.25;
-    word-break:keep-all;
-  }
-  .divider{
-    height:2px;
-    background:#cfcfcf;
-    max-width:720px;
-    margin:10px auto 10px;
-  }
-  .kana{
-    font-size:clamp(14px, 2.6vw, 20px);
-    color:#333;
-    margin:0 0 6px;
-  }
-  .romaji{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size:clamp(16px, 2.8vw, 22px);
-    font-weight:800;
-    letter-spacing:.08em;
-    color:#111;
-    margin:0 0 10px;
-    overflow-wrap:anywhere;
-  }
-  .romaji .good{color:#111}
-  .romaji .typedGood{color:#111}
-  .romaji .typedBad{color:var(--bad)}
-  .romaji .rest{color:#b7b7b7}
-
-  .hint{
-    margin-top:clamp(10px, 2.6vw, 18px);
-    font-size:clamp(22px, 5vw, 36px);
-    font-weight:900;
-    color:var(--accent2);
-  }
-  .subhint{
-    margin-top:6px;
-    color:#666;
-    font-weight:700;
-  }
-
-  /* Keyboard */
-
-  .kbControls{
-    display:none;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    margin:10px auto 0;
-    color:#555;
-    font-weight:800;
-    user-select:none;
-  }
-  .kbControls input[type="range"]{ width:160px; }
-  .kbControls #kbScaleVal{ min-width:52px; text-align:right; }
-
-  /* Keyboard viewport + scalable inner */
-  .kbStage{width:100%; display:flex; justify-content:center; align-items:flex-start; text-align:center;}
-  .kbInner{
-    display:block;
-    margin:0 auto;
-    width:auto;
-    transform: scale(var(--kbZoom, 1));
-    transform-origin: top center;
-    will-change: transform;
-  }
-  .kbWrap{
-    overflow:hidden;
-    margin:clamp(14px, 3vw, 28px) auto 0;
-    width:min(980px, 100%);
-    background:#f0f0f0;
-    border-radius:14px;
-    padding:clamp(10px, 2.2vw, 16px) clamp(10px, 2vw, 14px);
-    box-shadow: 0 2px 10px rgba(0,0,0,.06);
-  }
-  .row{display:flex; gap:6px; justify-content:center; margin:6px 0;}
-  .key{
-    background:var(--key);
-    border:1px solid var(--keyBorder);
-    border-radius:6px;
-    box-shadow:var(--keyShadow);
-    min-width:44px;
-    height:44px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:800;
-    color:#4a4a4a;
-    user-select:none;
-    position:relative;
-  }
-  .key.small{min-width:40px}
-  .key.wide{min-width:88px}
-  .key.wider{min-width:110px}
-  .key.space{min-width:340px}
-  .key.enter{min-width:96px}
-  .key.shift{min-width:120px}
-  .key.backspace{min-width:92px}
-  .key.hl{
-    background:rgba(0, 163, 255, .18);
-    border-color:rgba(0, 163, 255, .6);
-    box-shadow:0 0 0 3px rgba(0, 163, 255, .18);
-  }
-  .key.pressed{
-    background:rgba(255, 183, 3, .28);
-    border-color:rgba(255, 183, 3, .8);
-    box-shadow:0 0 0 3px rgba(255, 183, 3, .18);
-  }
-  .key .sub{
-    position:absolute;
-    right:6px;
-    bottom:4px;
-    font-size:10px;
-    opacity:.65;
-    font-weight:700;
-  }
-
-  /* Footer stats (small) */
-  .stats{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
-    gap:12px;
-    justify-content:center;
-    margin:24px auto 0;
-    max-width:900px;
-    padding:0 12px;
-  }
-  .stat{
-    width:auto;
-    min-width:0;
-    background:#fff;
-    border:1px solid #e6e6e6;
-    border-radius:12px;
-    padding:14px 10px;
-    box-shadow:0 1px 0 rgba(0,0,0,.05);
-  }
-  .stat .k{color:#666;font-weight:800;font-size:14px}
-  .stat .v{margin-top:6px;font-weight:900;font-size:26px}
-  .hiddenInput{
-    position:absolute;
-    left:-9999px;
-    top:-9999px;
-    opacity:0;
-    width:1px;height:1px;
-  }
-
-  .kbWrap, .key{ touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-  .key{ user-select:none; }
-  .key.shift.shiftOn{
-    background:rgba(245, 158, 11, .22);
-    border-color:rgba(245, 158, 11, .8);
-    box-shadow:0 0 0 3px rgba(245, 158, 11, .12);
-  }
-
-  /* Mobile layout */
-  
-  /* Device-friendly tweaks (Nest Hub / Duo / tablets) */
-  @media (max-height: 720px){
-    .topbar{height:48px;}
-    .progress{width:140px;height:10px;}
-    .wrap{padding-top:14px; padding-bottom:20px;}
-    .divider{margin:8px auto;}
-    .kbWrap{margin-top:12px;}
-    .stats{margin-top:14px; gap:10px;}
-    .stat{padding:12px 10px;}
-  }
-  @media (max-width: 600px){
-    .progress{width:120px;}
-    .topbar .title{font-size:14px; max-width:42vw; overflow:hidden; text-overflow:ellipsis;}
-    .topbar .right{gap:10px;}
-    .countBadge{margin-bottom:16px;}
-    .kbControls{gap:8px;}
-  }
-  /* Surface Duo portrait-ish: tighten blocks */
-  @media (max-width: 560px) and (min-height: 650px){
-    .jp{line-height:1.18;}
-    .kana{margin-bottom:4px;}
-    .romaji{letter-spacing:.06em;}
-    .stats{grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));}
-  }
-  /* 1024px wide dashboards (Nest Hub / iPad landscape): keep comfortable margins */
-  @media (min-width: 980px) and (max-height: 820px){
-    .wrap{max-width:1000px;}
-    .kbWrap{width:min(920px, 100%);}
-  }
-
-@media (max-width: 820px){
-    .topbar{height:48px;padding:0 10px;}
-    .topbar .title{font-size:14px}
-    .timeText{font-size:22px}
-    .progress{width:120px;height:10px}
-    .endBtn{padding:8px 12px;font-size:14px}
-    .wrap{padding:18px 12px 10px}
-    .kbControls{display:flex}
-    .kbControls input[type="range"]{width:180px}
-    .chip{transform:scale(.95); transform-origin:left top;}
-    .jp{font-size:28px}
-    .kana{font-size:14px}
-    .romaji{font-size:15px}
-    .kbWrap{width:100%; padding:10px; border-radius:14px}
-    .row{gap:6px}
-    .key{height:40px; font-size:14px; padding:6px 8px}
-    .key.wide{min-width:64px}
-    .key.enter{min-width:64px}
-    .key.space{height:46px}
-    .stats{grid-template-columns:repeat(2,1fr); gap:10px}
-    .stat .v{font-size:22px}
-  }
-
-
-  @media (max-width:380px){
-    .stats{grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));}
-    .topbar{padding:0 10px;}
-    .topbar .title{font-size:14px;}
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>1行日記ジェネレーター</title>
+  <style>
+    :root{
+      --bg:#0b0f1a; --panel:#121a2a; --panel2:#0f1626;
+      --text:#eaf0ff; --muted:#a9b4d1; --line:#25314e;
+      --accent:#7aa2ff; --good:#54d18c; --warn:#ffd166; --bad:#ff5d7a;
+      --shadow: 0 16px 50px rgba(0,0,0,.45);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", Arial, sans-serif;
+      background:
+        radial-gradient(900px 500px at 15% 10%, rgba(122,162,255,.25), transparent 60%),
+        radial-gradient(900px 600px at 85% 20%, rgba(84,209,140,.20), transparent 55%),
+        radial-gradient(900px 600px at 60% 90%, rgba(255,93,122,.16), transparent 60%),
+        var(--bg);
+      min-height:100vh;
+    }
+    header{
+      max-width:1100px; margin:0 auto; padding:24px 16px 12px;
+      display:flex; gap:12px; align-items:flex-end; justify-content:space-between;
+    }
+    h1{margin:0; font-size:22px; letter-spacing:.02em}
+    header p{margin:6px 0 0; color:var(--muted); font-size:13px}
+    .wrap{max-width:1100px; margin:0 auto; padding:12px 16px 28px; display:grid; gap:14px}
+    .grid{display:grid; gap:14px; grid-template-columns: 1.05fr .95fr}
+    @media (max-width: 920px){ .grid{grid-template-columns: 1fr} header{align-items:flex-start; flex-direction:column} }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(122,162,255,.18);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card .in{padding:14px}
+    .title{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.15);
+    }
+    .title strong{font-size:14px}
+    .pill{
+      font-size:12px; color:var(--muted);
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.15);
+      padding:6px 10px; border-radius:999px;
+    }
+    .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+    label{font-size:12px; color:var(--muted)}
+    input[type="text"], textarea, select{
+      width:100%;
+      background:rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--text);
+      padding:11px 12px;
+      border-radius:14px;
+      outline:none;
+    }
+    textarea{min-height:92px; resize:vertical}
+    .cols{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    @media (max-width:520px){ .cols{grid-template-columns:1fr} }
+    .btns{display:flex; flex-wrap:wrap; gap:10px}
+    button{
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.20);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+    }
+    button:hover{background:rgba(0,0,0,.30); border-color:rgba(122,162,255,.32)}
+    button:active{transform:translateY(1px)}
+    .primary{background:rgba(122,162,255,.22); border-color:rgba(122,162,255,.45)}
+    .primary:hover{background:rgba(122,162,255,.28)}
+    .good{background:rgba(84,209,140,.18); border-color:rgba(84,209,140,.35)}
+    .bad{background:rgba(255,93,122,.18); border-color:rgba(255,93,122,.35)}
+    .warn{background:rgba(255,209,102,.16); border-color:rgba(255,209,102,.30)}
+    .muted{color:var(--muted); font-size:12px; line-height:1.5}
+    .out{
+      margin-top:12px;
+      border-radius:16px;
+      border:1px dashed rgba(255,255,255,.18);
+      background:rgba(0,0,0,.18);
+      padding:12px;
+    }
+    .out .line{
+      font-size:15px;
+      line-height:1.6;
+      word-break:break-word;
+      white-space:pre-wrap;
+    }
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background:rgba(0,0,0,.62);
+      border:1px solid rgba(255,255,255,.15);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:999px;
+      box-shadow: var(--shadow);
+      font-size:13px;
+      opacity:0; pointer-events:none;
+      transition: opacity .25s ease, transform .25s ease;
+      z-index:9999;
+    }
+    .toast.show{opacity:1; transform:translateX(-50%) translateY(-2px)}
+    .list{
+      display:flex; flex-direction:column; gap:10px;
+      padding:14px;
+    }
+    .item{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      border-radius:16px;
+      padding:12px;
+    }
+    .meta{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between}
+    .meta .left{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .tag{
+      font-size:12px; padding:4px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--muted);
+      background:rgba(255,255,255,.04);
+    }
+    .tag.good{color:#c6ffe2}
+    .tag.warn{color:#fff2c6}
+    .tag.bad{color:#ffd0d8}
+    .meta time{font-size:12px; color:var(--muted)}
+    .item p{margin:10px 0 0; line-height:1.6; white-space:pre-wrap; word-break:break-word}
+    .item .actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+    .item .actions button{padding:8px 10px; border-radius:12px; font-size:12px}
+    .hr{height:1px; background:rgba(255,255,255,.08); margin:10px 0}
+    .kbr{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:11px; padding:2px 6px; border-radius:8px;
+      border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.25);
+      color:var(--muted);
+    }
+    .small{font-size:12px}
+  </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="title">タイピング練習　日本語入力</div>
-    <div class="right">
-      <div class="timerWrap">
-        <div class="timerLabel">残り時間</div>
-        <div class="progress" aria-hidden="true"><div id="bar"></div></div>
-        <div class="timeText"><span id="mm">5</span>分 <span id="ss">00</span>秒</div>
-      </div>
-      <button class="endBtn" id="btnEnd" type="button"><span class="endIcon">×</span> 終了する</button>
+  <header>
+    <div>
+      <h1>1行日記ジェネレーター</h1>
+      <p>気分とキーワードから「それっぽい1行」を作って保存。<span class="kbr">Enter</span>で生成、<span class="kbr">Ctrl/Cmd + K</span>で検索へ。</p>
     </div>
-  </div>
+    <div class="pill" id="stats">0件 / 今日 0件</div>
+  </header>
 
-  <div class="wrap">
-    <div class="center">
-      <div class="countBadge" aria-label="入力文字数">
-        <div class="label">入力文字数</div>
-        <div class="val" id="charCount">0</div>
+  <main class="wrap">
+    <section class="grid">
+      <!-- Generator -->
+      <div class="card">
+        <div class="title">
+          <strong>生成</strong>
+          <span class="pill">保存はブラウザ内（localStorage）</span>
+        </div>
+        <div class="in">
+          <div class="cols">
+            <div>
+              <label for="mood">気分</label>
+              <select id="mood">
+                <option value="good">🙂 良い</option>
+                <option value="neutral" selected>😐 ふつう</option>
+                <option value="bad">😣 しんどい</option>
+              </select>
+            </div>
+            <div>
+              <label for="tone">文体</label>
+              <select id="tone">
+                <option value="soft" selected>やさしい</option>
+                <option value="cool">淡々</option>
+                <option value="funny">ちょい笑い</option>
+                <option value="poem">詩っぽい</option>
+                <option value="biz">ビジネス風</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label for="kw">キーワード（任意・複数OK：スペース/読点区切り）</label>
+            <input id="kw" type="text" placeholder="例：散歩, コーヒー, 仕事, 友だち" autocomplete="off" />
+          </div>
+
+          <div style="margin-top:10px">
+            <label for="note">ひと言メモ（任意：素材として混ぜます）</label>
+            <textarea id="note" placeholder="例：午前中に集中できた。夜は早めに寝たい。"></textarea>
+          </div>
+
+          <div class="btns" style="margin-top:10px">
+            <button class="primary" id="genBtn">生成する（Enter）</button>
+            <button id="copyBtn">コピー</button>
+            <button class="good" id="saveBtn">保存</button>
+            <button class="warn" id="shuffleBtn" title="語彙セットをランダムに少し変える">味変</button>
+            <button class="bad" id="clearInputBtn">入力クリア</button>
+          </div>
+
+          <div class="out" aria-live="polite">
+            <div class="muted small">生成結果</div>
+            <div class="line" id="output">まだ生成していません。</div>
+            <div class="hr"></div>
+            <div class="muted">
+              ヒント：キーワードを「散歩」「コーヒー」みたいに入れると精度が上がります。<br>
+              文章を直してから保存してもOK（生成結果をクリックで編集）。
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="idleView">
-        <div class="hint">スペースキーを押して開始します。</div>
-        <div class="subhint">（日本語入力モードはOFFにして下さい。）</div>
+      <!-- Manage -->
+      <div class="card">
+        <div class="title">
+          <strong>管理</strong>
+          <span class="pill">検索・エクスポート</span>
+        </div>
+        <div class="in">
+          <div class="cols">
+            <div>
+              <label for="search">検索</label>
+              <input id="search" type="text" placeholder="例：散歩 / しんどい / 2026-02" autocomplete="off" />
+            </div>
+            <div>
+              <label for="sort">並び</label>
+              <select id="sort">
+                <option value="new" selected>新しい順</option>
+                <option value="old">古い順</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="btns" style="margin-top:10px">
+            <button id="exportBtn">エクスポート（JSON）</button>
+            <button id="importBtn">インポート</button>
+            <button class="bad" id="wipeBtn">全削除</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px">
+            インポートはJSONを貼り付けます。バックアップ用途。<br>
+            なおこのページはサーバ不要で動きます（index.htmlだけ）。
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div id="taskView" style="display:none">
-        <div class="jp" id="jpText">—</div>
-        <div class="divider"></div>
-        <div class="kana" id="kanaText">—</div>
-        <div class="romaji" id="romajiLine">—</div>
+    <!-- List -->
+    <section class="card">
+      <div class="title">
+        <strong>日記ログ</strong>
+        <span class="pill" id="filterPill">フィルタ: なし</span>
       </div>
+      <div class="list" id="list"></div>
+    </section>
+  </main>
 
-      <input class="hiddenInput" id="hiddenInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
-      <div class="kbControls" id="kbControls" aria-label="キーボード幅調整">
-        <span>キーボード幅</span>
-        <input type="range" id="kbScale" min="80" max="140" value="100" step="5"/>
-        <span id="kbScaleVal">100%</span>
-      </div>
-      <div class="kbWrap" id="kbWrap"><div class="kbStage" id="kbStage"><div class="kbInner" id="kb"></div></div></div>
+  <div class="toast" id="toast">Copied!</div>
 
-      <div class="stats">
-        <div class="stat"><div class="k">正解</div><div class="v" id="statOk">0</div></div>
-        <div class="stat"><div class="k">ミス</div><div class="v" id="statMiss">0</div></div>
-        <div class="stat"><div class="k">正確率</div><div class="v" id="statAcc">—</div></div>
-        <div class="stat"><div class="k">連続正解</div><div class="v" id="statStreak">0</div></div>
-        <div class="stat"><div class="k">速度</div><div class="v" id="statSpd">—</div></div>
-      </div>
-    </div>
-  </div>
+  <script>
+    // ========== Utilities ==========
+    const $ = (sel) => document.querySelector(sel);
+    const STORAGE_KEY = "one_line_diary_v1";
 
-<script>
-(() => {
-  // ===== Utilities =====
-  const $ = (id)=>document.getElementById(id);
+    function nowISO() {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
 
-  const STATE = { IDLE:"idle", RUN:"run", DONE:"done" };
-  let state = STATE.IDLE;
+    function todayYYYYMMDD() {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    }
 
-  const SESSION = {
-    totalSec: 5*60,
-    leftSec: 5*60,
-    timerId: null,
-    startedAt: 0,
-    startedTypingAt: 0,
-    ok: 0,
-    miss: 0,
-    streak: 0,
-    bestStreak: 0,
-    charCount: 0,
-    current: null, // {jp,kana,romaji}
-    typed: "",
-    mismatch: false, // current typed mismatch flag
-    order: [],
-    orderIdx: 0,
-  };
+    function toast(msg) {
+      const t = $("#toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(toast._tm);
+      toast._tm = setTimeout(() => t.classList.remove("show"), 1200);
+    }
 
-  // ===== Keyboard width scale (mobile) =====
+    function safeJSONParse(str) {
+      try { return { ok:true, value: JSON.parse(str) }; }
+      catch(e){ return { ok:false, error:e }; }
+    }
 
-  const KB_ROWS = [
-    // row1
-    [
-      {code:"Digit1", label:"1"}, {code:"Digit2", label:"2"}, {code:"Digit3", label:"3"}, {code:"Digit4", label:"4"},
-      {code:"Digit5", label:"5"}, {code:"Digit6", label:"6"}, {code:"Digit7", label:"7"}, {code:"Digit8", label:"8"},
-      {code:"Digit9", label:"9"}, {code:"Digit0", label:"0"},
-      {code:"Minus", label:"-"},
-      {code:"Equal", label:"^"},
-      {code:"IntlYen", label:"¥"},
-      {code:"Backspace", label:"Back", cls:"backspace wide"}
-    ],
-    // row2
-    [
-      {code:"KeyQ", label:"Q"}, {code:"KeyW", label:"W"}, {code:"KeyE", label:"E"}, {code:"KeyR", label:"R"},
-      {code:"KeyT", label:"T"}, {code:"KeyY", label:"Y"}, {code:"KeyU", label:"U"}, {code:"KeyI", label:"I"},
-      {code:"KeyO", label:"O"}, {code:"KeyP", label:"P"},
-      {code:"BracketLeft", label:"@"},
-      {code:"BracketRight", label:"["},
-      {code:"Enter", label:"Enter", cls:"enter"}
-    ],
-    // row3
-    [
-      {code:"KeyA", label:"A"}, {code:"KeyS", label:"S"}, {code:"KeyD", label:"D"}, {code:"KeyF", label:"F"},
-      {code:"KeyG", label:"G"}, {code:"KeyH", label:"H"}, {code:"KeyJ", label:"J"}, {code:"KeyK", label:"K"},
-      {code:"KeyL", label:"L"},
-      {code:"Semicolon", label:";"},
-      {code:"Quote", label:":"}, // JISでは : がこのへん。簡略表示
-      {code:"Backslash", label:"]"} // 簡略（この記号はほぼ出ないので保険）
-    ],
-    // row4
-    [
-      {code:"ShiftLeft", label:"Shift", cls:"shift"},
-      {code:"KeyZ", label:"Z"}, {code:"KeyX", label:"X"}, {code:"KeyC", label:"C"}, {code:"KeyV", label:"V"},
-      {code:"KeyB", label:"B"}, {code:"KeyN", label:"N"}, {code:"KeyM", label:"M"},
-      {code:"Comma", label:","}, {code:"Period", label:"."}, {code:"Slash", label:"/"},
-      {code:"IntlRo", label:"\\"},
-      {code:"ShiftRight", label:"Shift", cls:"shift"}
-    ],
-    // row5
-    [
-      {code:"Space", label:"", cls:"space"}
-    ]
-  ];
-  const ROOT = document.documentElement;
-  const kbScaleEl = $("kbScale");
-  const kbScaleValEl = $("kbScaleVal");
-  let KB_DESIRED_SCALE = 1;
-  function estimateKeyboardBaseWidth(){
-    // Compute intrinsic keyboard width from the row definition (robust across devices)
-    const W = {
-      small:40, key:44, wide:88, wider:110, space:340, enter:96, shift:120, backspace:92
+    // ========== Templates (lightweight) ==========
+    const vocab = {
+      openers: [
+        "今日は", "なんだか今日は", "結果として今日は", "ふと気づいたら今日は", "とりあえず今日は"
+      ],
+      good: {
+        soft: [
+          "小さくうまくいった。", "気持ちが前に進んだ。", "ちゃんと呼吸できた日。", "自分にやさしくできた。"
+        ],
+        cool: [
+          "進捗あり。", "淡々と片付けた。", "やるべきことをやった。", "気分は上向き。"
+        ],
+        funny: [
+          "なぜか勝った気がする。", "世界がちょっとだけ味方。", "今日の自分、えらい（当社比）。", "運がログインした。"
+        ],
+        poem: [
+          "光が少し増えた。", "胸の中に余白ができた。", "遠くの音まで届いた。", "今日をやわらかく折りたたむ。"
+        ],
+        biz: [
+          "前進を確認。", "成果を一部回収。", "良好なコンディションを維持。", "リズムが整った。"
+        ]
+      },
+      neutral: {
+        soft: [
+          "無理せず回せた。", "ほどほどでよかった。", "今日はこれで十分。", "ちゃんと生活した。"
+        ],
+        cool: [
+          "通常運転。", "大きな波なし。", "予定通り。", "可もなく不可もなく。"
+        ],
+        funny: [
+          "今日も地球に住めた。", "バグは出たが致命傷ではない。", "HPは減ったけどゼロじゃない。", "とりあえず生還。"
+        ],
+        poem: [
+          "曇りのまま、歩けた。", "静かな時間が続いた。", "白黒の間に色がある。", "何もないことも、ある。"
+        ],
+        biz: [
+          "定常稼働。", "リスク低めで推移。", "タスクを平準化。", "現状維持を達成。"
+        ]
+      },
+      bad: {
+        soft: [
+          "よく耐えた。", "今日は休む日だった。", "自分を守れたら勝ち。", "明日につなげるだけで十分。"
+        ],
+        cool: [
+          "コンディション不良。", "消耗が大きい。", "回復を優先。", "負荷が高かった。"
+        ],
+        funny: [
+          "今日はもう店じまい。", "脳みそが低電力モード。", "情緒がWi-Fi切れ。", "人生、たまにメンテ。"
+        ],
+        poem: [
+          "暗い水の底で息をする。", "雨の音だけが味方。", "ひび割れたまま、立っていた。", "夜にほどけて、また結ぶ。"
+        ],
+        biz: [
+          "稼働率低下。", "回復計画が必要。", "優先度を見直す。", "無理な稼働は回避。"
+        ]
+      },
+      connectors: [
+        "でも", "そして", "だから", "けれど", "それでも", "ちなみに"
+      ],
+      endings: [
+        "明日は少しだけ軽くしたい。", "次は一歩でいい。", "寝たらだいたい解決。", "水と光を足していく。", "今日をここで閉じる。"
+      ],
+      actions: [
+        "散歩", "コーヒー", "早寝", "片づけ", "ストレッチ", "読書", "メモ", "深呼吸", "音楽", "湯船"
+      ]
     };
-    const GAP = 6; // must match CSS `.row{ gap:6px }`
-    let maxW = 0;
-    for(const row of KB_ROWS){
-      let w = 0;
-      for(const k of row){
-        const cls = (k.cls || "").split(/\s+/).filter(Boolean);
-        // width class priority
-        if(cls.includes("small")) w += W.small;
-        else if(cls.includes("wider")) w += W.wider;
-        else if(cls.includes("wide")) w += W.wide;
-        else if(cls.includes("space")) w += W.space;
-        else if(cls.includes("enter")) w += W.enter;
-        else if(cls.includes("shift")) w += W.shift;
-        else if(cls.includes("backspace")) w += W.backspace;
-        else w += W.key;
+
+    let salt = Math.random(); // "味変"用
+
+    function pick(arr) {
+      return arr[Math.floor((Math.random() + salt*0.00001) * arr.length) % arr.length];
+    }
+
+    function splitKeywords(s) {
+      return (s || "")
+        .replace(/[、，]/g, " ")
+        .split(/\s+/)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .slice(0, 6);
+    }
+
+    function buildLine({mood, tone, keywords, note}) {
+      const opener = pick(vocab.openers);
+      const moodKey = mood === "good" ? "good" : (mood === "bad" ? "bad" : "neutral");
+      const tail = pick(vocab[moodKey][tone] || vocab[moodKey].soft);
+
+      const kws = keywords.length ? keywords : [pick(vocab.actions)];
+      const kw = kws.length === 1 ? `「${kws[0]}」` : `「${kws[0]}」と「${kws[1]}」`;
+
+      const conn = pick(vocab.connectors);
+      const end = pick(vocab.endings);
+
+      // noteを短く混ぜる
+      const memo = (note || "").trim();
+      const memoPart = memo
+        ? ` ${conn}、${memo.replace(/\s+/g," ").slice(0, 28)}`
+        : ` ${conn}、${kw}が効いた。`;
+
+      // 1行っぽく（長すぎる時は軽く丸める）
+      let line = `${opener}${tail}${memoPart} ${end}`;
+      line = line.replace(/\s+/g, " ").trim();
+      if (line.length > 78) {
+        line = line.slice(0, 76).replace(/[、,]\s*[^、,]*$/, "") + "…";
       }
-      if(row.length > 1) w += GAP * (row.length - 1);
-      if(w > maxW) maxW = w;
+      return line;
     }
-    return maxW || 1;
-  }
 
-  function getAvailableStageWidth(stage){
-    // Prefer VisualViewport (iOS address bar / zoom can make layout measurements stale)
-    const vv = window.visualViewport;
-    if(vv){
-      // Convert visualViewport width into layout px relative to the stage
-      // Use stage's bounding rect for reliable "available" width
-      const rect = stage.getBoundingClientRect();
-      // Clamp to rect width because stage is already constrained by layout
-      return Math.max(1, Math.min(rect.width, vv.width));
+    // ========== Storage ==========
+    function loadAll() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const p = safeJSONParse(raw);
+      if (!p.ok || !Array.isArray(p.value)) return [];
+      return p.value;
     }
-    return Math.max(1, stage.getBoundingClientRect().width || stage.clientWidth || 1);
-  }
-
-  function updateKbFit(){
-    const stage = $("kbStage") || $("kbWrap");
-    const kb = $("kb");
-    if(!stage || !kb) return;
-
-    const baseW = estimateKeyboardBaseWidth();
-    let availW = getAvailableStageWidth(stage);
-
-    // Safety margin for subpixel rounding / scrollbars / safe-area
-    const margin = 8; // px
-    availW = Math.max(1, Math.floor(availW) - margin);
-
-    if(!baseW || !availW) return;
-
-    // Hard cap: never exceed fit-to-width
-    const maxZoom = availW / baseW;
-    const desired = KB_DESIRED_SCALE;
-
-    const zoom = Math.max(0.3, Math.min(desired, maxZoom));
-    ROOT.style.setProperty("--kbZoom", String(zoom));
-
-    // Height: measure after applying zoom (use DOM rect)
-    requestAnimationFrame(() => {
-      const rect = kb.getBoundingClientRect();
-      stage.style.height = Math.ceil(rect.height) + "px";
-    });
-  }
-
-  // Refit on viewport changes (including iOS URL bar show/hide)
-  const scheduleFit = (() => {
-    let raf = 0;
-    return () => {
-      if(raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => { raf = 0; updateKbFit(); });
-    };
-  })();
-
-  window.addEventListener("resize", scheduleFit, {passive:true});
-  window.addEventListener("orientationchange", scheduleFit, {passive:true});
-  if(window.visualViewport){
-    window.visualViewport.addEventListener("resize", scheduleFit, {passive:true});
-    window.visualViewport.addEventListener("scroll", scheduleFit, {passive:true});
-  }
-  function applyKbScale(pct){
-    const clamped = Math.max(70, Math.min(160, pct|0));
-    const scale = clamped / 100;
-    KB_DESIRED_SCALE = scale;
-    ROOT.style.setProperty("--kbScale", String(scale));
-    if(kbScaleEl) kbScaleEl.value = String(clamped);
-    if(kbScaleValEl) kbScaleValEl.textContent = `${clamped}%`;
-    try{ localStorage.setItem("kbScalePct", String(clamped)); }catch(_){}
-    updateKbFit();
-  }
-  (function initKbScale(){
-    let saved = 100;
-    try{
-      const v = localStorage.getItem("kbScalePct");
-      if(v) saved = parseInt(v,10);
-    }catch(_){}
-    applyKbScale(isFinite(saved)? saved : 100);
-    if(kbScaleEl){
-      kbScaleEl.addEventListener("input", () => applyKbScale(parseInt(kbScaleEl.value,10)));
+    function saveAll(items) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     }
-  })();
 
+    // ========== App state ==========
+    let items = loadAll();
+    let currentLine = "";
 
-  // ` は無効（誤操作防止）
-  function isBackquoteKey(e){
-    return e.code === "Backquote" || e.key === "`";
-  }
-
-  // 長音（ー/ｰ）は 半角ハイフン扱い
-  function normalizeTarget(s){
-    return String(s)
-      .replace(/[ーｰ]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  // ===== Romaji (kana -> romaji) =====
-  // 「ぁ/ぃ/ぅ/ぇ/ぉ」= la/li/lu/le/lo に統一済み
-  const KANA_MAP = {
-    "ぁ":"la","ぃ":"li","ぅ":"lu","ぇ":"le","ぉ":"lo",
-    "あ":"a","い":"i","う":"u","え":"e","お":"o",
-    "か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko",
-    "さ":"sa","し":"shi","す":"su","せ":"se","そ":"so",
-    "た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to",
-    "な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no",
-    "は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho",
-    "ま":"ma","み":"mi","む":"mu","め":"me","も":"mo",
-    "や":"ya","ゆ":"yu","よ":"yo",
-    "ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro",
-    "わ":"wa","を":"wo","ん":"n",
-    "が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go",
-    "ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo",
-    "だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do",
-    "ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo",
-    "ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po",
-    "きゃ":"kya","きゅ":"kyu","きょ":"kyo",
-    "しゃ":"sha","しゅ":"shu","しょ":"sho",
-    "ちゃ":"cha","ちゅ":"chu","ちょ":"cho",
-    "にゃ":"nya","にゅ":"nyu","にょ":"nyo",
-    "ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo",
-    "みゃ":"mya","みゅ":"myu","みょ":"myo",
-    "りゃ":"rya","りゅ":"ryu","りょ":"ryo",
-    "ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo",
-    "じゃ":"ja","じゅ":"ju","じょ":"jo",
-    "びゃ":"bya","びゅ":"byu","びょ":"byo",
-    "ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo",
-    "ふぁ":"fa","ふぃ":"fi","ふぇ":"fe","ふぉ":"fo",
-    "ゔぁ":"va","ゔぃ":"vi","ゔ":"vu","ゔぇ":"ve","ゔぉ":"vo",
-    "ゃ":"lya","ゅ":"lyu","ょ":"lyo",
-    "っ":"", // handled separately
-    "ー":"-","ｰ":"-",
-    "、":",","。":".","，":",","．":".","・":"/","／":"/",
-    "「":"","」":"","『":"","』":"","（":"", "）":"", "(": "", ")":"",
-    "　":" "," ":" "
-  };
-
-  function toHira(s){
-    return String(s).replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0x60))
-                    .replace(/ヴ/g,"ゔ");
-  }
-
-  function kanaToRomaji(kana){
-    kana = toHira(kana);
-    let out = "";
-    for(let i=0;i<kana.length;i++){
-      const two = kana.slice(i, i+2);
-      if(KANA_MAP[two]){
-        out += KANA_MAP[two];
-        i++;
-        continue;
-      }
-      const ch = kana[i];
-      if(ch === "っ"){
-        // small tsu: double next consonant
-        const next2 = kana.slice(i+1, i+3);
-        const next1 = kana[i+1] ?? "";
-        let nextRoma = KANA_MAP[next2] || KANA_MAP[next1] || "";
-        if(nextRoma){
-          out += nextRoma[0];
-        }
-        continue;
-      }
-      if(ch === "ん"){
-        // 'n' before vowel/y
-        const next2 = kana.slice(i+1, i+3);
-        const next1 = kana[i+1] ?? "";
-        let nextRoma = KANA_MAP[next2] || KANA_MAP[next1] || "";
-        if(nextRoma && /^[aiueoy]/.test(nextRoma)){
-          out += "n'";
-        }else{
-          out += "n";
-        }
-        continue;
-      }
-      out += (KANA_MAP[ch] ?? ch);
+    // ========== Render ==========
+    function moodLabel(m) {
+      if (m === "good") return "🙂 良い";
+      if (m === "bad") return "😣 しんどい";
+      return "😐 ふつう";
     }
-    // normalize spaces and long vowel already done
-    out = out.replace(/\s+/g," ").trim();
-    return out;
-  }
-
-  // ===== Phrase bank (約1000) =====
-  // 1) 手作業（漢字+よみ）: 例として自然な文章を優先
-  const BASE = [
-    {jp:"瀬戸大橋に行ってきました。", kana:"せとおおはしにいってきました。"},
-    {jp:"環境保護は重要だ。", kana:"かんきょうほごはじゅうようだ。"},
-    {jp:"帰ってきたら、手を洗おう。", kana:"かえってきたら、てをあらおう。"},
-    {jp:"朝ごはんを食べてから出発します。", kana:"あさごはんをたべてからしゅっぱつします。"},
-    {jp:"電車が遅れて困りました。", kana:"でんしゃがおくれてこまりました。"},
-    {jp:"今日は天気がいいですね。", kana:"きょうはてんきがいいですね。"},
-    {jp:"忘れ物をしないように。", kana:"わすれものをしないように。"},
-    {jp:"水分補給を忘れずに。", kana:"すいぶんほきゅうをわすれずに。"},
-    {jp:"静かにしてください。", kana:"しずかにしてください。"},
-    {jp:"安全第一で行動しよう。", kana:"あんぜんだいいちでこうどうしよう。"},
-    {jp:"時間に余裕を持とう。", kana:"じかんによゆうをもとう。"},
-    {jp:"エコバッグを持っていこう。", kana:"えこばっぐをもっていこう。"},
-    {jp:"ゴミは分別して捨てる。", kana:"ごみはぶんべつしてすてる。"},
-    {jp:"ハードディスクが壊れました。", kana:"はーどでぃすくがこわれました。"},
-    {jp:"パスワードは定期的に変えよう。", kana:"ぱすわーどはていきてきにかえよう。"},
-    {jp:"深呼吸して落ち着こう。", kana:"しんこきゅうしておちつこう。"},
-    {jp:"困ったら相談してください。", kana:"こまったらそうだんしてください。"},
-    {jp:"無理をしないで休もう。", kana:"むりをしないでやすもう。"},
-    {jp:"小さな積み重ねが大切だ。", kana:"ちいさなつみかさねがたいせつだ。"},
-  ];
-
-  // 2) 自然なひらがな短文をテンプレで生成して1000に増やす（読み不要）
-  // ※ 全角入力禁止でも打てるよう、句読点は「、。」(= , . に変換)のみを使う
-  const PLACES = ["こうえん","えき","がっこう","としょかん","すーぱー","びょういん","きっさてん","しょくば","いえ","まち","うみ","やま","かわ"];
-  const TIMES  = ["きょう","あした","きのう","こんしゅう","らいしゅう","いま","さっき","あさ","ひる","よる"];
-  const WEATHER = ["はれ","くもり","あめ","ゆき","かぜがつよい","さむい","あつい"];
-  const ACTIONS_PAST = ["さんぽしました","うんどうしました","べんきょうしました","かいものしました","そうじしました","りょうりしました","れんしゅうしました","きゅうけいしました","しゅくだいをしました","でんわしました"];
-  const ACTIONS_NOW  = ["さんぽします","うんどうします","べんきょうします","かいものします","そうじします","りょうりします","れんしゅうします","きゅうけいします","しゅくだいをします","でんわします"];
-  const EVENTS  = ["でんしゃがおくれました","ばすがこみました","みちにまよいました","つかれました","ねむいです","おなかがすきました","じかんがありません","わすれものをしました","ぱそこんがこわれました","すまほをなくしました"];
-  const REQUESTS = ["しずかにしてください","ゆっくりはなしてください","もういちどいってください","ちょっとまってください","きをつけてください","てつだってください"];
-  const ADVICE = ["てをあらおう","みずをのもう","はやくねよう","あさごはんをたべよう","まどをあけてかんきしよう","でんきをこまめにけそう","ごみをぶんべつしよう","すいぶんほきゅうをわすれずに"];
-  const TOPICS = ["かんきょうほご","けんこう","あんぜん","べんきょう","しごと","そうじ","せいかつ","こうつう","じかん","れんしゅう"];
-  const STATEMENTS = ["たいせつだ","じゅうようだ","ひつようだ","だいじだ","むずかしい","かんたんだ","たのしい"];
-
-  const PHRASES = [];
-  const used = new Set();
-
-  function addPhrase(jp, kana){
-    // kana未指定なら同じ
-    kana = kana ?? jp;
-    const key = `${jp}__${kana}`;
-    if(used.has(key)) return false;
-    used.add(key);
-    PHRASES.push({jp, kana, romaji:kanaToRomaji(kana)});
-    return true;
-  }
-
-  // base first
-  for(const b of BASE){
-    addPhrase(b.jp, b.kana);
-  }
-
-  // templates (ひらがな中心)
-  const TEMPLATES = [
-    () => `${PLACES[rPick(PLACES)]}にいってきました。`,
-    () => `${PLACES[rPick(PLACES)]}で${ACTIONS_PAST[rPick(ACTIONS_PAST)]}。`,
-    () => `${TIMES[rPick(TIMES)]}は${WEATHER[rPick(WEATHER)]}です。`,
-    () => `${EVENTS[rPick(EVENTS)]}。`,
-    () => `${REQUESTS[rPick(REQUESTS)]}。`,
-    () => `${ADVICE[rPick(ADVICE)]}。`,
-    () => `かえってきたら、${ADVICE[rPick(ADVICE)]}。`,
-    () => `わすれものをしないように。`,
-    () => `じかんによゆうをもとう。`,
-    () => `むりをしないでやすもう。`,
-    () => `${TOPICS[rPick(TOPICS)]}は${STATEMENTS[rPick(STATEMENTS)]}。`,
-    () => `きょうは${PLACES[rPick(PLACES)]}へいきます。`,
-    () => `あしたは${PLACES[rPick(PLACES)]}へいこう。`,
-    () => `さっき${PLACES[rPick(PLACES)]}であいました。`,
-    () => `いまから${ACTIONS_NOW[rPick(ACTIONS_NOW)]}。`,
-    () => `すこしきゅうけいしよう。`,
-    () => `ゆっくりいきましょう。`,
-    () => `ていねいにやろう。`,
-    () => `あんぜんをかくにんしよう。`,
-    () => `すまほのじゅうでんをわすれずに。`,
-  ];
-
-  // deterministic-ish pick for variety but still "random"
-  let seed = 123456789;
-  function rnd(){
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  }
-  function rPick(arr){
-    return Math.floor(rnd() * arr.length);
-  }
-
-  // fill up to ~1000 with unique sentences
-  let guard = 0;
-  while(PHRASES.length < 1000 && guard < 200000){
-    guard++;
-    const maker = TEMPLATES[rPick(TEMPLATES)];
-    const jp = maker();
-    // ひらがな生成は読み不要なので kana=jp
-    addPhrase(jp, jp);
-  }
-  // fallback: if something went wrong, keep at least base
-  if(PHRASES.length < BASE.length) {
-    PHRASES.length = 0;
-    for(const b of BASE) PHRASES.push({jp:b.jp, kana:b.kana, romaji:kanaToRomaji(b.kana)});
-  }
-
-  // ===== Order / no repeat until full cycle =====
-
-  function makeOrder(){
-    SESSION.order = Array.from({length:PHRASES.length}, (_,i)=>i);
-    // shuffle
-    for(let i=SESSION.order.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [SESSION.order[i], SESSION.order[j]] = [SESSION.order[j], SESSION.order[i]];
+    function moodClass(m) {
+      if (m === "good") return "good";
+      if (m === "bad") return "bad";
+      return "warn";
     }
-    SESSION.orderIdx = 0;
-  }
-  makeOrder();
 
-  function nextItem(){
-    if(SESSION.orderIdx >= SESSION.order.length){
-      const last = SESSION.current ? SESSION.current.jp : null;
-      makeOrder();
-      // avoid immediate repeat at cycle boundary
-      if(last && PHRASES[SESSION.order[0]].jp === last && SESSION.order.length>1){
-        [SESSION.order[0], SESSION.order[1]] = [SESSION.order[1], SESSION.order[0]];
-      }
+    function updateStats() {
+      const today = todayYYYYMMDD();
+      const todayCount = items.filter(x => (x.date || "").startsWith(today)).length;
+      $("#stats").textContent = `${items.length}件 / 今日 ${todayCount}件`;
     }
-    const idx = SESSION.order[SESSION.orderIdx++];
-    return PHRASES[idx];
-  }
 
-  // ===== Virtual keyboard (JIS-ish minimal) =====
+    function renderList() {
+      const q = $("#search").value.trim().toLowerCase();
+      const sort = $("#sort").value;
 
-  const keyElsByCode = new Map();
-  const TAP_MODE = (window.matchMedia && window.matchMedia("(pointer:coarse)").matches) || ("ontouchstart" in window);
-  let vkShift = false;
-  function setShiftUI(on){
-    const l = keyElsByCode.get("ShiftLeft");
-    const r = keyElsByCode.get("ShiftRight");
-    [l,r].forEach(el => { if(el) el.classList.toggle("shiftOn", !!on); });
-  }
-  function charFromVK(code, label){
-    if(code === "Space") return " ";
-    if(code === "Minus") return "-";
-    if(code === "Comma") return ",";
-    if(code === "Period") return ".";
-    if(code === "Slash") return "/";
-    if(code && code.startsWith("Key")) return (vkShift ? label.toUpperCase() : label.toLowerCase());
-    if(code && code.startsWith("Digit")) return label;
-    // JIS-ish extras (mostly unused but harmless)
-    if(code === "BracketLeft") return "@";
-    if(code === "BracketRight") return "[";
-    if(code === "Backslash") return "]";
-    if(code === "IntlRo") return "\\";
-    if(code === "IntlYen") return "\\";
-    if(code === "Equal") return "^";
-    if(code === "Semicolon") return ";";
-    if(code === "Quote") return ":"; 
-    return "";
-  }
-  function handleVirtualKeyPress(code, label){
-    pressFlashByCode(code);
-    // Start with Space
-    if((state === STATE.IDLE || state === STATE.DONE) && code === "Space"){
-      resetAll();
-      ensureRunningStart();
-      return;
-    }
-    if(state !== STATE.RUN){
-      highlightNextKey();
-      return;
-    }
-    if(code === "Backspace"){ handleBackspace(); return; }
-    if(code === "Enter"){ return; } // ignored
-    if(code === "ShiftLeft" || code === "ShiftRight"){
-      vkShift = !vkShift;
-      setShiftUI(vkShift);
-      return;
-    }
-    const ch = charFromVK(code, label);
-    if(!ch) return;
-    handleCharInput(ch);
-    if(vkShift){
-      vkShift = false;
-      setShiftUI(false);
-    }
-  }
-
-  function renderKeyboard(){
-    const kb = $("kb");
-    kb.innerHTML = "";
-    KB_ROWS.forEach(row => {
-      const rowEl = document.createElement("div");
-      rowEl.className = "row";
-      row.forEach(k => {
-        const el = document.createElement("div");
-        el.className = "key " + (k.cls || "");
-        el.dataset.code = k.code;
-        if(k.code === "Space"){
-          el.innerHTML = "<span class='sub'>Space</span>";
-        }else{
-          el.textContent = k.label;
-        }
-        rowEl.appendChild(el);
-        keyElsByCode.set(k.code, el);
-        // Tap/click input (mobile: use on-screen keyboard)
-        el.addEventListener("pointerdown", (ev)=>{
-          if(TAP_MODE){ ev.preventDefault(); handleVirtualKeyPress(k.code, k.label); }
-        }, {passive:false});
-        el.addEventListener("click", (ev)=>{
-          if(TAP_MODE){ ev.preventDefault(); handleVirtualKeyPress(k.code, k.label); }
+      let filtered = items.slice();
+      if (q) {
+        filtered = filtered.filter(it => {
+          const hay = `${it.date} ${it.mood} ${it.tone} ${(it.keywords||[]).join(" ")} ${it.text}`.toLowerCase();
+          return hay.includes(q);
         });
-      });
-      kb.appendChild(rowEl);
+        $("#filterPill").textContent = `フィルタ: "${q}"`;
+      } else {
+        $("#filterPill").textContent = `フィルタ: なし`;
+      }
+
+      filtered.sort((a,b) => sort === "new"
+        ? (b.ts - a.ts)
+        : (a.ts - b.ts)
+      );
+
+      const el = $("#list");
+      el.innerHTML = "";
+
+      if (!filtered.length) {
+        const empty = document.createElement("div");
+        empty.className = "item";
+        empty.innerHTML = `
+          <div class="meta">
+            <div class="left">
+              <span class="tag">まだログがありません</span>
+            </div>
+            <time></time>
+          </div>
+          <p>右上の生成から「保存」を押すとここに溜まります。</p>
+        `;
+        el.appendChild(empty);
+        updateStats();
+        return;
+      }
+
+      for (const it of filtered) {
+        const div = document.createElement("div");
+        div.className = "item";
+        const kw = (it.keywords || []).slice(0,6);
+        const kwTags = kw.map(k => `<span class="tag">${escapeHtml(k)}</span>`).join("");
+        div.innerHTML = `
+          <div class="meta">
+            <div class="left">
+              <span class="tag ${moodClass(it.mood)}">${moodLabel(it.mood)}</span>
+              <span class="tag">${escapeHtml(labelTone(it.tone))}</span>
+              ${kwTags}
+            </div>
+            <time>${escapeHtml(it.date)}</time>
+          </div>
+          <p>${escapeHtml(it.text)}</p>
+          <div class="actions">
+            <button data-act="copy">コピー</button>
+            <button data-act="edit">編集</button>
+            <button data-act="del" class="bad">削除</button>
+          </div>
+        `;
+
+        div.querySelector('[data-act="copy"]').addEventListener("click", async () => {
+          await copyText(it.text);
+        });
+
+        div.querySelector('[data-act="edit"]').addEventListener("click", () => {
+          const next = prompt("編集（1行日記）", it.text);
+          if (next == null) return;
+          const trimmed = next.trim();
+          if (!trimmed) return toast("空は保存できません");
+          it.text = trimmed;
+          saveAll(items);
+          renderList();
+          toast("更新しました");
+        });
+
+        div.querySelector('[data-act="del"]').addEventListener("click", () => {
+          if (!confirm("この日記を削除しますか？")) return;
+          items = items.filter(x => x.id !== it.id);
+          saveAll(items);
+          renderList();
+          toast("削除しました");
+        });
+
+        el.appendChild(div);
+      }
+
+      updateStats();
+    }
+
+    function labelTone(t){
+      return ({
+        soft:"やさしい",
+        cool:"淡々",
+        funny:"ちょい笑い",
+        poem:"詩っぽい",
+        biz:"ビジネス風"
+      })[t] || t;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("コピーしました");
+      }catch(e){
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        toast("コピーしました");
+      }
+    }
+
+    // ========== Generator actions ==========
+    function generate() {
+      const mood = $("#mood").value;
+      const tone = $("#tone").value;
+      const keywords = splitKeywords($("#kw").value);
+      const note = $("#note").value;
+
+      currentLine = buildLine({mood, tone, keywords, note});
+      $("#output").textContent = currentLine;
+    }
+
+    function saveCurrent() {
+      const text = ($("#output").textContent || "").trim();
+      if (!text || text === "まだ生成していません。") return toast("まず生成してね");
+
+      const item = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2),
+        ts: Date.now(),
+        date: nowISO(),
+        mood: $("#mood").value,
+        tone: $("#tone").value,
+        keywords: splitKeywords($("#kw").value),
+        text
+      };
+      items.push(item);
+      saveAll(items);
+      renderList();
+      toast("保存しました");
+    }
+
+    // outputをクリックで編集できるようにする
+    $("#output").addEventListener("click", () => {
+      const text = ($("#output").textContent || "").trim();
+      if (!text || text === "まだ生成していません。") return;
+      const next = prompt("生成結果を編集（保存前でもOK）", text);
+      if (next == null) return;
+      const trimmed = next.trim();
+      if (!trimmed) return toast("空にはできません");
+      $("#output").textContent = trimmed;
+      currentLine = trimmed;
+      toast("編集しました");
     });
-  }
-  renderKeyboard();
-  // Fit keyboard into viewport without horizontal scroll
-  updateKbFit();
 
-  function clearHL(){
-    for(const el of keyElsByCode.values()){
-      el.classList.remove("hl");
-    }
-  }
-  function clearPressed(){
-    for(const el of keyElsByCode.values()){
-      el.classList.remove("pressed");
-    }
-  }
+    // Buttons
+    $("#genBtn").addEventListener("click", generate);
+    $("#shuffleBtn").addEventListener("click", () => { salt = Math.random(); generate(); toast("味変しました"); });
+    $("#saveBtn").addEventListener("click", saveCurrent);
+    $("#copyBtn").addEventListener("click", async () => {
+      const text = ($("#output").textContent || "").trim();
+      if (!text || text === "まだ生成していません。") return toast("まず生成してね");
+      await copyText(text);
+    });
+    $("#clearInputBtn").addEventListener("click", () => {
+      $("#kw").value = "";
+      $("#note").value = "";
+      toast("入力をクリア");
+    });
 
-  // Map next character -> KeyboardEvent.code (JIS minimal)
-  function charToCode(ch){
-    if(!ch) return null;
-    if(ch === " ") return "Space";
-    const c = ch.toLowerCase();
-    if(c >= "a" && c <= "z") return "Key" + c.toUpperCase();
-    if(c >= "0" && c <= "9") return "Digit" + c;
-    const map = {
-      "-":"Minus",
-      "^":"Equal",
-      "¥":"IntlYen","\\":"IntlRo",
-      ",":"Comma",".":"Period","/":"Slash",
-      ";":"Semicolon",":":"Quote",
-      "@":"BracketLeft","[":"BracketRight",
-      "]":"Backslash",
-      "'":"Quote",
-      "_":"IntlRo",
-      "!":"Digit1",
-      "?":"Slash",
-      ".":"Period",
-    };
-    return map[ch] || map[c] || null;
-  }
+    // Search/sort
+    $("#search").addEventListener("input", renderList);
+    $("#sort").addEventListener("change", renderList);
 
-  function highlightNextKey(){
-    clearHL();
-    if(state === STATE.IDLE){
-      const el = keyElsByCode.get("Space");
-      if(el) el.classList.add("hl");
-      return;
-    }
-    if(!SESSION.current) return;
-    const target = SESSION.current.romajiNorm;
-    const pos = SESSION.typed.length;
-    const next = target[pos] || "";
-    const code = charToCode(next);
-    if(code){
-      const el = keyElsByCode.get(code);
-      if(el) el.classList.add("hl");
-    }
-  }
+    // Export/Import/Wipe
+    $("#exportBtn").addEventListener("click", async () => {
+      const data = JSON.stringify(items, null, 2);
+      await copyText(data);
+      toast("JSONをコピーしました");
+      alert("エクスポート(JSON)をクリップボードにコピーしました。\nメモ帳などに貼り付けて保存できます。");
+    });
 
-  function pressFlashByCode(code){
-    if(!code) return;
-    const el = keyElsByCode.get(code);
-    if(!el) return;
-    el.classList.add("pressed");
-    setTimeout(()=>el.classList.remove("pressed"), 120);
-  }
-
-  // ===== Problem / render =====
-  function setProblem(item){
-    SESSION.current = {
-      jp: item.jp,
-      kana: item.kana,
-      romaji: item.romaji,
-      romajiNorm: normalizeTarget(item.romaji).toLowerCase()
-    };
-    SESSION.typed = "";
-    SESSION.mismatch = false;
-    $("jpText").textContent = item.jp;
-    $("kanaText").textContent = toHira(item.kana);
-    renderRomajiLine();
-    highlightNextKey();
-  }
-
-  function renderRomajiLine(){
-    const target = SESSION.current ? SESSION.current.romajiNorm : "";
-    const typed = SESSION.typed;
-    let html = "";
-    for(let i=0;i<target.length;i++){
-      const ch = target[i].toUpperCase();
-      if(i < typed.length){
-        const ok = typed[i] === target[i];
-        html += `<span class="${ok ? "typedGood":"typedBad"}">${escapeHtml(ch)}</span>`;
-      }else{
-        html += `<span class="rest">${escapeHtml(ch)}</span>`;
+    $("#importBtn").addEventListener("click", () => {
+      const txt = prompt("インポートするJSONを貼り付けてください（配列）");
+      if (!txt) return;
+      const p = safeJSONParse(txt);
+      if (!p.ok || !Array.isArray(p.value)) {
+        alert("JSONの形式が違います（配列が必要）。");
+        return;
       }
-    }
-    $("romajiLine").innerHTML = html || "—";
-  }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
+      // 簡易バリデーション
+      const incoming = p.value
+        .filter(x => x && typeof x === "object" && typeof x.text === "string")
+        .map(x => ({
+          id: x.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2)),
+          ts: typeof x.ts === "number" ? x.ts : Date.now(),
+          date: x.date || nowISO(),
+          mood: x.mood || "neutral",
+          tone: x.tone || "soft",
+          keywords: Array.isArray(x.keywords) ? x.keywords.slice(0,6).map(String) : [],
+          text: String(x.text).trim()
+        }))
+        .filter(x => x.text);
 
-  // ===== Timer =====
-  function updateTimerUI(){
-    const mm = Math.floor(SESSION.leftSec / 60);
-    const ss = SESSION.leftSec % 60;
-    $("mm").textContent = String(mm);
-    $("ss").textContent = String(ss).padStart(2,"0");
-    const ratio = Math.max(0, Math.min(1, SESSION.leftSec / SESSION.totalSec));
-    $("bar").style.transform = `scaleX(${ratio})`;
-  }
+      if (!incoming.length) return alert("取り込めるデータがありませんでした。");
 
-  function startTimer(){
-    if(SESSION.timerId) return;
-    SESSION.startedAt = Date.now();
-    SESSION.leftSec = SESSION.totalSec;
-    updateTimerUI();
-    SESSION.timerId = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - SESSION.startedAt)/1000);
-      SESSION.leftSec = Math.max(0, SESSION.totalSec - elapsed);
-      updateTimerUI();
-      if(SESSION.leftSec <= 0){
-        finish();
-      }else{
-        updateSpeed();
+      // 既存とマージ（id重複は後勝ち）
+      const map = new Map(items.map(x => [x.id, x]));
+      for (const it of incoming) map.set(it.id, it);
+      items = Array.from(map.values());
+      saveAll(items);
+      renderList();
+      toast("インポートしました");
+    });
+
+    $("#wipeBtn").addEventListener("click", () => {
+      if (!items.length) return toast("ログは空です");
+      if (!confirm("全削除します。本当に？（元に戻せません）")) return;
+      if (!confirm("最終確認：ほんとに全削除しますか？")) return;
+      items = [];
+      saveAll(items);
+      renderList();
+      toast("全削除しました");
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const cmd = isMac ? e.metaKey : e.ctrlKey;
+
+      // Enter to generate (avoid when typing in textarea with Shift+Enter etc.)
+      if (e.key === "Enter" && !e.shiftKey) {
+        const active = document.activeElement;
+        const isTextArea = active && active.tagName === "TEXTAREA";
+        if (!isTextArea) {
+          e.preventDefault();
+          generate();
+        }
       }
-    }, 200);
-  }
 
-  function finish(){
-    if(state === STATE.DONE) return;
-    state = STATE.DONE;
-    if(SESSION.timerId){ clearInterval(SESSION.timerId); SESSION.timerId=null; }
-    // show idle message with result summary
-    $("taskView").style.display = "none";
-    $("idleView").style.display = "";
-    $("idleView").innerHTML = `<div class="hint">終了しました。</div>
-      <div class="subhint">もう一度やるには、スペースキーを押してください。</div>`;
-    highlightNextKey();
-  }
-
-  function resetAll(){
-    if(SESSION.timerId){ clearInterval(SESSION.timerId); SESSION.timerId=null; }
-    state = STATE.IDLE;
-    SESSION.leftSec = SESSION.totalSec;
-    SESSION.startedAt = 0;
-    SESSION.startedTypingAt = 0;
-    SESSION.ok = 0;
-    SESSION.miss = 0;
-    SESSION.streak = 0;
-    SESSION.bestStreak = 0;
-    SESSION.charCount = 0;
-    $("charCount").textContent = "0";
-    $("statOk").textContent = "0";
-    $("statMiss").textContent = "0";
-    $("statAcc").textContent = "—";
-    $("statStreak").textContent = "0";
-    $("statSpd").textContent = "—";
-    updateTimerUI();
-    $("idleView").style.display = "";
-    $("idleView").innerHTML = `<div class="hint">スペースキーを押して開始します。</div>
-      <div class="subhint">（日本語入力モードはOFFにして下さい。）</div>`;
-    $("taskView").style.display = "none";
-    setProblem(nextItem()); // prepare next
-    highlightNextKey();
-  }
-
-  // ===== Scoring / speed =====
-  function updateAcc(){
-    const total = SESSION.ok + SESSION.miss;
-    if(total === 0) { $("statAcc").textContent = "—"; return; }
-    const acc = Math.round((SESSION.ok / total) * 100);
-    $("statAcc").textContent = acc + "%";
-  }
-  function updateSpeed(){
-    // chars per minute based on typed characters (romaji) since start typing
-    if(!SESSION.startedTypingAt){ $("statSpd").textContent = "—"; return; }
-    const elapsedMin = (Date.now() - SESSION.startedTypingAt) / 60000;
-    if(elapsedMin <= 0){ $("statSpd").textContent = "—"; return; }
-    const cpm = Math.round(SESSION.charCount / elapsedMin);
-    $("statSpd").textContent = cpm + " cpm";
-  }
-
-  function onCorrect(){
-    SESSION.ok += 1;
-    SESSION.streak += 1;
-    SESSION.bestStreak = Math.max(SESSION.bestStreak, SESSION.streak);
-    $("statOk").textContent = String(SESSION.ok);
-    $("statStreak").textContent = `${SESSION.streak}`;
-    updateAcc();
-    // next
-    setProblem(nextItem());
-  }
-
-  function onMiss(){
-    SESSION.miss += 1;
-    SESSION.streak = 0;
-    $("statMiss").textContent = String(SESSION.miss);
-    $("statStreak").textContent = "0";
-    updateAcc();
-  }
-
-  // ===== Input handling (manual buffer; avoids IME double input) =====
-  function ensureRunningStart(){
-    if(state === STATE.IDLE || state === STATE.DONE){
-      state = STATE.RUN;
-      $("idleView").style.display = "none";
-      $("taskView").style.display = "";
-      if(!SESSION.current) setProblem(nextItem());
-      startTimer();
-      // first actual typing moment
-      if(!SESSION.startedTypingAt) SESSION.startedTypingAt = Date.now();
-      highlightNextKey();
-    }
-  }
-
-  function handleCharInput(ch){
-    if(state !== STATE.RUN) return;
-    const target = SESSION.current.romajiNorm;
-    const pos = SESSION.typed.length;
-    if(pos >= target.length) return;
-
-    // normalize long vowel input too
-    if(ch === "ー" || ch === "ｰ") ch = "-";
-
-    // accept only ascii printable and space, comma, period, slash, hyphen, apostrophe
-    if(ch.length !== 1) return;
-    const code = ch.charCodeAt(0);
-    if(!(code === 32 || (code >= 33 && code <= 126))) return;
-
-    // letters: force lowercase for compare
-    const add = (/[A-Za-z]/.test(ch)) ? ch.toLowerCase() : ch;
-
-    // update pressed flash based on char
-    pressFlashByCode(charToCode(add));
-
-    // apply
-    SESSION.typed += add;
-    SESSION.charCount += 1;
-    $("charCount").textContent = String(SESSION.charCount);
-
-    // mismatch detection (only count miss once per problem, like many typing games)
-    if(add !== target[pos]){
-      if(!SESSION.mismatch){
-        SESSION.mismatch = true;
-        onMiss();
+      // Ctrl/Cmd + K focus search
+      if (cmd && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        $("#search").focus();
+        toast("検索へ");
       }
-    }
+    });
 
-    renderRomajiLine();
-    highlightNextKey();
-    updateSpeed();
-
-    if(SESSION.typed.length === target.length){
-      if(!SESSION.mismatch){
-        onCorrect();
-      }else{
-        // mismatch: still move on when fully typed (to keep flow)
-        setProblem(nextItem());
-      }
-    }
-  }
-
-  function handleBackspace(){
-    if(state !== STATE.RUN) return;
-    if(SESSION.typed.length === 0) return;
-    SESSION.typed = SESSION.typed.slice(0, -1);
-    renderRomajiLine();
-    highlightNextKey();
-  }
-
-  window.addEventListener("keydown", (e) => {
-    // disable backquote
-    if(isBackquoteKey(e)){
-      e.preventDefault();
-      return;
-    }
-
-    // Start with Space (idle/done)
-    if((state === STATE.IDLE || state === STATE.DONE) && e.code === "Space"){
-      e.preventDefault();
-      resetAll();
-      ensureRunningStart();
-      return;
-    }
-
-    if(state !== STATE.RUN){
-      // ignore other keys
-      highlightNextKey();
-      return;
-    }
-
-    // prevent default for control keys to avoid scrolling etc
-    if(e.code === "Space") e.preventDefault();
-
-    if(e.code === "Backspace"){
-      e.preventDefault();
-      pressFlashByCode("Backspace");
-      handleBackspace();
-      return;
-    }
-    if(e.code === "Enter"){
-      // Enter is ignored (Benesse-like)
-      e.preventDefault();
-      pressFlashByCode("Enter");
-      return;
-    }
-
-    // Ignore IME "Process"
-    if(e.key === "Process" || e.isComposing) return;
-
-    // Append printable key
-    if(e.key && e.key.length === 1){
-      handleCharInput(e.key);
-    }
-  }, {passive:false});
-
-  $("btnEnd").addEventListener("click", () => finish());
-
-  // initial prepare
-  setProblem(nextItem());
-  updateTimerUI();
-  highlightNextKey();
-
-})();
-</script>
+    // Initial render
+    generate();
+    renderList();
+    updateStats();
+  </script>
 </body>
 </html>
