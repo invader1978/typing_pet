@@ -1,706 +1,480 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>1行日記ジェネレーター</title>
-  <style>
-    :root{
-      --bg:#0b0f1a; --panel:#121a2a; --panel2:#0f1626;
-      --text:#eaf0ff; --muted:#a9b4d1; --line:#25314e;
-      --accent:#7aa2ff; --good:#54d18c; --warn:#ffd166; --bad:#ff5d7a;
-      --shadow: 0 16px 50px rgba(0,0,0,.45);
-      --r:18px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; color:var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", Arial, sans-serif;
-      background:
-        radial-gradient(900px 500px at 15% 10%, rgba(122,162,255,.25), transparent 60%),
-        radial-gradient(900px 600px at 85% 20%, rgba(84,209,140,.20), transparent 55%),
-        radial-gradient(900px 600px at 60% 90%, rgba(255,93,122,.16), transparent 60%),
-        var(--bg);
-      min-height:100vh;
-    }
-    header{
-      max-width:1100px; margin:0 auto; padding:24px 16px 12px;
-      display:flex; gap:12px; align-items:flex-end; justify-content:space-between;
-    }
-    h1{margin:0; font-size:22px; letter-spacing:.02em}
-    header p{margin:6px 0 0; color:var(--muted); font-size:13px}
-    .wrap{max-width:1100px; margin:0 auto; padding:12px 16px 28px; display:grid; gap:14px}
-    .grid{display:grid; gap:14px; grid-template-columns: 1.05fr .95fr}
-    @media (max-width: 920px){ .grid{grid-template-columns: 1fr} header{align-items:flex-start; flex-direction:column} }
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(122,162,255,.18);
-      border-radius:var(--r);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-    .card .in{padding:14px}
-    .title{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.15);
-    }
-    .title strong{font-size:14px}
-    .pill{
-      font-size:12px; color:var(--muted);
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.15);
-      padding:6px 10px; border-radius:999px;
-    }
-    .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
-    label{font-size:12px; color:var(--muted)}
-    input[type="text"], textarea, select{
-      width:100%;
-      background:rgba(0,0,0,.22);
-      border:1px solid rgba(255,255,255,.10);
-      color:var(--text);
-      padding:11px 12px;
-      border-radius:14px;
-      outline:none;
-    }
-    textarea{min-height:92px; resize:vertical}
-    .cols{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
-    @media (max-width:520px){ .cols{grid-template-columns:1fr} }
-    .btns{display:flex; flex-wrap:wrap; gap:10px}
-    button{
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(0,0,0,.20);
-      color:var(--text);
-      padding:10px 12px;
-      border-radius:14px;
-      cursor:pointer;
-      transition: transform .05s ease, background .2s ease, border-color .2s ease;
-      user-select:none;
-    }
-    button:hover{background:rgba(0,0,0,.30); border-color:rgba(122,162,255,.32)}
-    button:active{transform:translateY(1px)}
-    .primary{background:rgba(122,162,255,.22); border-color:rgba(122,162,255,.45)}
-    .primary:hover{background:rgba(122,162,255,.28)}
-    .good{background:rgba(84,209,140,.18); border-color:rgba(84,209,140,.35)}
-    .bad{background:rgba(255,93,122,.18); border-color:rgba(255,93,122,.35)}
-    .warn{background:rgba(255,209,102,.16); border-color:rgba(255,209,102,.30)}
-    .muted{color:var(--muted); font-size:12px; line-height:1.5}
-    .out{
-      margin-top:12px;
-      border-radius:16px;
-      border:1px dashed rgba(255,255,255,.18);
-      background:rgba(0,0,0,.18);
-      padding:12px;
-    }
-    .out .line{
-      font-size:15px;
-      line-height:1.6;
-      word-break:break-word;
-      white-space:pre-wrap;
-    }
-    .toast{
-      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-      background:rgba(0,0,0,.62);
-      border:1px solid rgba(255,255,255,.15);
-      color:var(--text);
-      padding:10px 12px;
-      border-radius:999px;
-      box-shadow: var(--shadow);
-      font-size:13px;
-      opacity:0; pointer-events:none;
-      transition: opacity .25s ease, transform .25s ease;
-      z-index:9999;
-    }
-    .toast.show{opacity:1; transform:translateX(-50%) translateY(-2px)}
-    .list{
-      display:flex; flex-direction:column; gap:10px;
-      padding:14px;
-    }
-    .item{
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.18);
-      border-radius:16px;
-      padding:12px;
-    }
-    .meta{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between}
-    .meta .left{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-    .tag{
-      font-size:12px; padding:4px 10px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      color:var(--muted);
-      background:rgba(255,255,255,.04);
-    }
-    .tag.good{color:#c6ffe2}
-    .tag.warn{color:#fff2c6}
-    .tag.bad{color:#ffd0d8}
-    .meta time{font-size:12px; color:var(--muted)}
-    .item p{margin:10px 0 0; line-height:1.6; white-space:pre-wrap; word-break:break-word}
-    .item .actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
-    .item .actions button{padding:8px 10px; border-radius:12px; font-size:12px}
-    .hr{height:1px; background:rgba(255,255,255,.08); margin:10px 0}
-    .kbr{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:11px; padding:2px 6px; border-radius:8px;
-      border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.25);
-      color:var(--muted);
-    }
-    .small{font-size:12px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Runner</title>
+<style>
+  :root { color-scheme: light; }
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center;
+    background:#ddd;
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+    user-select:none; -webkit-user-select:none;
+  }
+  .wrap{ width:min(860px, 96vw); }
+  .top{ display:flex; justify-content:flex-end; align-items:center; margin:0 0 10px; }
+  .hud{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+  .pill{
+    padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(0,0,0,.18);
+    background:rgba(255,255,255,.75);
+    font-size:13px; opacity:.95;
+  }
+  canvas{
+    width:100%; height:auto; aspect-ratio: 16/6;
+    border-radius:18px;
+    border:1px solid rgba(0,0,0,.18);
+    box-shadow:0 12px 35px rgba(0,0,0,.25);
+    touch-action: manipulation;
+    background:#fff;
+  }
+</style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>1行日記ジェネレーター</h1>
-      <p>気分とキーワードから「それっぽい1行」を作って保存。<span class="kbr">Enter</span>で生成、<span class="kbr">Ctrl/Cmd + K</span>で検索へ。</p>
+  <div class="wrap">
+    <div class="top">
+      <div class="hud">
+        <div class="pill" id="score">SCORE: 0</div>
+        <div class="pill" id="best">BEST: 0</div>
+      </div>
     </div>
-    <div class="pill" id="stats">0件 / 今日 0件</div>
-  </header>
+    <canvas id="c" width="960" height="360"></canvas>
+  </div>
 
-  <main class="wrap">
-    <section class="grid">
-      <!-- Generator -->
-      <div class="card">
-        <div class="title">
-          <strong>生成</strong>
-          <span class="pill">保存はブラウザ内（localStorage）</span>
-        </div>
-        <div class="in">
-          <div class="cols">
-            <div>
-              <label for="mood">気分</label>
-              <select id="mood">
-                <option value="good">🙂 良い</option>
-                <option value="neutral" selected>😐 ふつう</option>
-                <option value="bad">😣 しんどい</option>
-              </select>
-            </div>
-            <div>
-              <label for="tone">文体</label>
-              <select id="tone">
-                <option value="soft" selected>やさしい</option>
-                <option value="cool">淡々</option>
-                <option value="funny">ちょい笑い</option>
-                <option value="poem">詩っぽい</option>
-                <option value="biz">ビジネス風</option>
-              </select>
-            </div>
-          </div>
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
 
-          <div style="margin-top:10px">
-            <label for="kw">キーワード（任意・複数OK：スペース/読点区切り）</label>
-            <input id="kw" type="text" placeholder="例：散歩, コーヒー, 仕事, 友だち" autocomplete="off" />
-          </div>
+  const $score = document.getElementById("score");
+  const $best  = document.getElementById("best");
 
-          <div style="margin-top:10px">
-            <label for="note">ひと言メモ（任意：素材として混ぜます）</label>
-            <textarea id="note" placeholder="例：午前中に集中できた。夜は早めに寝たい。"></textarea>
-          </div>
+  function fixDpi(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+    canvas.width  = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  fixDpi();
+  window.addEventListener("resize", fixDpi);
 
-          <div class="btns" style="margin-top:10px">
-            <button class="primary" id="genBtn">生成する（Enter）</button>
-            <button id="copyBtn">コピー</button>
-            <button class="good" id="saveBtn">保存</button>
-            <button class="warn" id="shuffleBtn" title="語彙セットをランダムに少し変える">味変</button>
-            <button class="bad" id="clearInputBtn">入力クリア</button>
-          </div>
+  // ===== Game Params =====
+  const GROUND_Y = 300;
+  const GRAVITY  = 2200;
+  const JUMP_V   = 780;
+  const MAX_JUMPS = 1;     // single jump only
 
-          <div class="out" aria-live="polite">
-            <div class="muted small">生成結果</div>
-            <div class="line" id="output">まだ生成していません。</div>
-            <div class="hr"></div>
-            <div class="muted">
-              ヒント：キーワードを「散歩」「コーヒー」みたいに入れると精度が上がります。<br>
-              文章を直してから保存してもOK（生成結果をクリックで編集）。
-            </div>
-          </div>
-        </div>
-      </div>
+  // Day/Night cycle (seconds)
+  const CYCLE_SEC = 18;    // switch every 18s (day->night->day)
 
-      <!-- Manage -->
-      <div class="card">
-        <div class="title">
-          <strong>管理</strong>
-          <span class="pill">検索・エクスポート</span>
-        </div>
-        <div class="in">
-          <div class="cols">
-            <div>
-              <label for="search">検索</label>
-              <input id="search" type="text" placeholder="例：散歩 / しんどい / 2026-02" autocomplete="off" />
-            </div>
-            <div>
-              <label for="sort">並び</label>
-              <select id="sort">
-                <option value="new" selected>新しい順</option>
-                <option value="old">古い順</option>
-              </select>
-            </div>
-          </div>
+  // difficulty
+  let speed = 420;
+  let spawnMin = 0.75;
+  let spawnMax = 1.35;
 
-          <div class="btns" style="margin-top:10px">
-            <button id="exportBtn">エクスポート（JSON）</button>
-            <button id="importBtn">インポート</button>
-            <button class="bad" id="wipeBtn">全削除</button>
-          </div>
+  // ===== State =====
+  let playing = false;
+  let gameOver = false;
+  let tPrev = performance.now();
+  let time = 0;           // for day/night + parallax
+  let score = 0;
 
-          <div class="muted" style="margin-top:10px">
-            インポートはJSONを貼り付けます。バックアップ用途。<br>
-            なおこのページはサーバ不要で動きます（index.htmlだけ）。
-          </div>
-        </div>
-      </div>
-    </section>
+  let best = Number(localStorage.getItem("onekey_best") || 0);
+  $best.textContent = `BEST: ${best}`;
 
-    <!-- List -->
-    <section class="card">
-      <div class="title">
-        <strong>日記ログ</strong>
-        <span class="pill" id="filterPill">フィルタ: なし</span>
-      </div>
-      <div class="list" id="list"></div>
-    </section>
-  </main>
+  const rand = (a,b)=> a + Math.random()*(b-a);
+  const clamp = (v,a,b)=> Math.max(a, Math.min(b, v));
 
-  <div class="toast" id="toast">Copied!</div>
+  function isNight(){
+    return (Math.floor(time / CYCLE_SEC) % 2) === 1;
+  }
 
-  <script>
-    // ========== Utilities ==========
-    const $ = (sel) => document.querySelector(sel);
-    const STORAGE_KEY = "one_line_diary_v1";
+  // ===== Player =====
+  const player = {
+    x: 120,
+    y: GROUND_Y - 46,
+    w: 34, h: 46,
+    vy: 0,
+    jumps: 0,
+    blink: 0
+  };
 
-    function nowISO() {
-      const d = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  // obstacles (ground + flying rectangles)
+  // types: "ground" | "fly"
+  const obs = [];
+  let spawnTimer = rand(spawnMin, spawnMax);
+
+  function reset(){
+    playing = true;
+    gameOver = false;
+
+    speed = 420;
+    spawnMin = 0.75;
+    spawnMax = 1.35;
+
+    time = 0;
+    score = 0;
+    obs.length = 0;
+
+    player.y = GROUND_Y - player.h;
+    player.vy = 0;
+    player.jumps = 0;
+    player.blink = 0;
+
+    spawnTimer = rand(spawnMin, spawnMax);
+    tPrev = performance.now();
+
+    $score.textContent = `SCORE: 0`;
+  }
+
+  function jumpOrStart(){
+    if(!playing || gameOver){
+      reset();
+      return;
     }
-
-    function todayYYYYMMDD() {
-      const d = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    if(player.jumps < MAX_JUMPS){
+      player.vy = -JUMP_V;
+      player.jumps++;
+      player.blink = 0.12;
     }
+  }
 
-    function toast(msg) {
-      const t = $("#toast");
-      t.textContent = msg;
-      t.classList.add("show");
-      clearTimeout(toast._tm);
-      toast._tm = setTimeout(() => t.classList.remove("show"), 1200);
+  window.addEventListener("keydown", (e)=>{
+    if(e.code==="Space"){
+      e.preventDefault();
+      jumpOrStart();
     }
+  });
+  canvas.addEventListener("pointerdown", (e)=>{
+    e.preventDefault();
+    jumpOrStart();
+  });
 
-    function safeJSONParse(str) {
-      try { return { ok:true, value: JSON.parse(str) }; }
-      catch(e){ return { ok:false, error:e }; }
-    }
+  // ===== Collision =====
+  function hit(a,b){
+    return a.x < b.x + b.w && a.x + a.w > b.x &&
+           a.y < b.y + b.h && a.y + a.h > b.y;
+  }
 
-    // ========== Templates (lightweight) ==========
-    const vocab = {
-      openers: [
-        "今日は", "なんだか今日は", "結果として今日は", "ふと気づいたら今日は", "とりあえず今日は"
-      ],
-      good: {
-        soft: [
-          "小さくうまくいった。", "気持ちが前に進んだ。", "ちゃんと呼吸できた日。", "自分にやさしくできた。"
-        ],
-        cool: [
-          "進捗あり。", "淡々と片付けた。", "やるべきことをやった。", "気分は上向き。"
-        ],
-        funny: [
-          "なぜか勝った気がする。", "世界がちょっとだけ味方。", "今日の自分、えらい（当社比）。", "運がログインした。"
-        ],
-        poem: [
-          "光が少し増えた。", "胸の中に余白ができた。", "遠くの音まで届いた。", "今日をやわらかく折りたたむ。"
-        ],
-        biz: [
-          "前進を確認。", "成果を一部回収。", "良好なコンディションを維持。", "リズムが整った。"
-        ]
-      },
-      neutral: {
-        soft: [
-          "無理せず回せた。", "ほどほどでよかった。", "今日はこれで十分。", "ちゃんと生活した。"
-        ],
-        cool: [
-          "通常運転。", "大きな波なし。", "予定通り。", "可もなく不可もなく。"
-        ],
-        funny: [
-          "今日も地球に住めた。", "バグは出たが致命傷ではない。", "HPは減ったけどゼロじゃない。", "とりあえず生還。"
-        ],
-        poem: [
-          "曇りのまま、歩けた。", "静かな時間が続いた。", "白黒の間に色がある。", "何もないことも、ある。"
-        ],
-        biz: [
-          "定常稼働。", "リスク低めで推移。", "タスクを平準化。", "現状維持を達成。"
-        ]
-      },
-      bad: {
-        soft: [
-          "よく耐えた。", "今日は休む日だった。", "自分を守れたら勝ち。", "明日につなげるだけで十分。"
-        ],
-        cool: [
-          "コンディション不良。", "消耗が大きい。", "回復を優先。", "負荷が高かった。"
-        ],
-        funny: [
-          "今日はもう店じまい。", "脳みそが低電力モード。", "情緒がWi-Fi切れ。", "人生、たまにメンテ。"
-        ],
-        poem: [
-          "暗い水の底で息をする。", "雨の音だけが味方。", "ひび割れたまま、立っていた。", "夜にほどけて、また結ぶ。"
-        ],
-        biz: [
-          "稼働率低下。", "回復計画が必要。", "優先度を見直す。", "無理な稼働は回避。"
-        ]
-      },
-      connectors: [
-        "でも", "そして", "だから", "けれど", "それでも", "ちなみに"
-      ],
-      endings: [
-        "明日は少しだけ軽くしたい。", "次は一歩でいい。", "寝たらだいたい解決。", "水と光を足していく。", "今日をここで閉じる。"
-      ],
-      actions: [
-        "散歩", "コーヒー", "早寝", "片づけ", "ストレッチ", "読書", "メモ", "深呼吸", "音楽", "湯船"
-      ]
-    };
+  function cw(){ return canvas.clientWidth; }
+  function ch(){ return canvas.clientHeight; }
 
-    let salt = Math.random(); // "味変"用
+  // ===== Spawning =====
+  function spawnObstacle(){
+    // Flying rectangles: include "will hit you if you don't jump" lanes
+    // Probability increases a bit with score
+    const flyChance = clamp(0.20 + score/1800, 0.20, 0.55);
 
-    function pick(arr) {
-      return arr[Math.floor((Math.random() + salt*0.00001) * arr.length) % arr.length];
-    }
+    if(Math.random() < flyChance){
+      const w = rand(22, 40);
+      const h = rand(16, 26);
 
-    function splitKeywords(s) {
-      return (s || "")
-        .replace(/[、，]/g, " ")
-        .split(/\s+/)
-        .map(x => x.trim())
-        .filter(Boolean)
-        .slice(0, 6);
-    }
+      // 3 height bands:
+      //  - LOW: collide with player while running; jump can clear above it
+      //  - MID/HIGH: classic "air" obstacles
+      const r = Math.random();
+      let y;
 
-    function buildLine({mood, tone, keywords, note}) {
-      const opener = pick(vocab.openers);
-      const moodKey = mood === "good" ? "good" : (mood === "bad" ? "bad" : "neutral");
-      const tail = pick(vocab[moodKey][tone] || vocab[moodKey].soft);
+      const groundTop = GROUND_Y - player.h;
 
-      const kws = keywords.length ? keywords : [pick(vocab.actions)];
-      const kw = kws.length === 1 ? `「${kws[0]}」` : `「${kws[0]}」と「${kws[1]}」`;
-
-      const conn = pick(vocab.connectors);
-      const end = pick(vocab.endings);
-
-      // noteを短く混ぜる
-      const memo = (note || "").trim();
-      const memoPart = memo
-        ? ` ${conn}、${memo.replace(/\s+/g," ").slice(0, 28)}`
-        : ` ${conn}、${kw}が効いた。`;
-
-      // 1行っぽく（長すぎる時は軽く丸める）
-      let line = `${opener}${tail}${memoPart} ${end}`;
-      line = line.replace(/\s+/g, " ").trim();
-      if (line.length > 78) {
-        line = line.slice(0, 76).replace(/[、,]\s*[^、,]*$/, "") + "…";
-      }
-      return line;
-    }
-
-    // ========== Storage ==========
-    function loadAll() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const p = safeJSONParse(raw);
-      if (!p.ok || !Array.isArray(p.value)) return [];
-      return p.value;
-    }
-    function saveAll(items) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }
-
-    // ========== App state ==========
-    let items = loadAll();
-    let currentLine = "";
-
-    // ========== Render ==========
-    function moodLabel(m) {
-      if (m === "good") return "🙂 良い";
-      if (m === "bad") return "😣 しんどい";
-      return "😐 ふつう";
-    }
-    function moodClass(m) {
-      if (m === "good") return "good";
-      if (m === "bad") return "bad";
-      return "warn";
-    }
-
-    function updateStats() {
-      const today = todayYYYYMMDD();
-      const todayCount = items.filter(x => (x.date || "").startsWith(today)).length;
-      $("#stats").textContent = `${items.length}件 / 今日 ${todayCount}件`;
-    }
-
-    function renderList() {
-      const q = $("#search").value.trim().toLowerCase();
-      const sort = $("#sort").value;
-
-      let filtered = items.slice();
-      if (q) {
-        filtered = filtered.filter(it => {
-          const hay = `${it.date} ${it.mood} ${it.tone} ${(it.keywords||[]).join(" ")} ${it.text}`.toLowerCase();
-          return hay.includes(q);
-        });
-        $("#filterPill").textContent = `フィルタ: "${q}"`;
+      if(r < 0.45){
+        // LOW flyer: near ground so standing collides; jumping clears
+        // place it just a bit above ground line
+        y = (GROUND_Y - h) - rand(2, 10);
+      } else if(r < 0.85){
+        // MID
+        y = rand(groundTop - 110, groundTop - 70);
       } else {
-        $("#filterPill").textContent = `フィルタ: なし`;
+        // HIGH
+        y = rand(groundTop - 160, groundTop - 120);
       }
 
-      filtered.sort((a,b) => sort === "new"
-        ? (b.ts - a.ts)
-        : (a.ts - b.ts)
-      );
+      obs.push({
+        type: "fly",
+        x: cw() + 60,
+        y,
+        w, h,
+        // small bob to feel alive, but keep low flyer mostly stable
+        t: rand(0, 10),
+        amp: (r < 0.45) ? rand(0.5, 2.0) : rand(2.0, 6.0),
+        freq: rand(2.0, 3.6),
+        passed:false
+      });
+      return;
+    }
 
-      const el = $("#list");
-      el.innerHTML = "";
+    // Ground rectangle obstacles
+    const tall = Math.random() < 0.28;
+    const baseH = tall ? rand(56, 78) : rand(28, 46);
+    const w = tall ? rand(16, 28) : rand(18, 32);
 
-      if (!filtered.length) {
-        const empty = document.createElement("div");
-        empty.className = "item";
-        empty.innerHTML = `
-          <div class="meta">
-            <div class="left">
-              <span class="tag">まだログがありません</span>
-            </div>
-            <time></time>
-          </div>
-          <p>右上の生成から「保存」を押すとここに溜まります。</p>
-        `;
-        el.appendChild(empty);
-        updateStats();
-        return;
+    obs.push({
+      type:"ground",
+      x: cw() + 40,
+      y: GROUND_Y - baseH,
+      w, h: baseH,
+      passed:false
+    });
+
+    // occasional double
+    if(Math.random() < 0.18){
+      const tall2 = Math.random() < 0.28;
+      const h2 = tall2 ? rand(56, 78) : rand(28, 46);
+      const w2 = tall2 ? rand(16, 28) : rand(18, 32);
+      obs.push({
+        type:"ground",
+        x: cw() + 40 + w + rand(14, 24),
+        y: GROUND_Y - h2,
+        w:w2, h:h2,
+        passed:false
+      });
+    }
+  }
+
+  // ===== Background elements =====
+  const stars = Array.from({length: 80}, () => ({
+    x: Math.random()*1000,
+    y: Math.random()*240,
+    r: Math.random()*1.5 + 0.5,
+    s: Math.random()*30 + 20,
+    p: Math.random()
+  }));
+
+  const clouds = Array.from({length: 5}, () => ({
+    x: Math.random()*1000,
+    y: Math.random()*120 + 20,
+    w: rand(70, 140),
+    h: rand(18, 32),
+    s: rand(0.10, 0.25)
+  }));
+
+  // ===== Update =====
+  function update(dt){
+    if(!playing || gameOver) return;
+
+    time += dt;
+
+    // difficulty increase
+    speed += dt * 10;
+    spawnMin = Math.max(0.45, spawnMin - dt*0.006);
+    spawnMax = Math.max(0.85, spawnMax - dt*0.006);
+
+    // score
+    score += dt * 10;
+    $score.textContent = `SCORE: ${Math.floor(score)}`;
+
+    // spawn
+    spawnTimer -= dt;
+    if(spawnTimer <= 0){
+      spawnObstacle();
+      spawnTimer = rand(spawnMin, spawnMax);
+    }
+
+    // player physics
+    player.vy += GRAVITY * dt;
+    player.y  += player.vy * dt;
+
+    const groundTop = GROUND_Y - player.h;
+    if(player.y >= groundTop){
+      player.y = groundTop;
+      player.vy = 0;
+      player.jumps = 0;
+    }
+
+    player.blink = Math.max(0, player.blink - dt);
+
+    // obstacles update
+    for(const o of obs){
+      o.x -= speed * dt;
+
+      if(o.type === "fly"){
+        o.t += dt;
+        // gentle bob, clamped so low flyers don't drift too much
+        const dy = Math.sin(o.t * o.freq) * o.amp * dt;
+        o.y = clamp(o.y + dy, 10, GROUND_Y - o.h - 2);
       }
 
-      for (const it of filtered) {
-        const div = document.createElement("div");
-        div.className = "item";
-        const kw = (it.keywords || []).slice(0,6);
-        const kwTags = kw.map(k => `<span class="tag">${escapeHtml(k)}</span>`).join("");
-        div.innerHTML = `
-          <div class="meta">
-            <div class="left">
-              <span class="tag ${moodClass(it.mood)}">${moodLabel(it.mood)}</span>
-              <span class="tag">${escapeHtml(labelTone(it.tone))}</span>
-              ${kwTags}
-            </div>
-            <time>${escapeHtml(it.date)}</time>
-          </div>
-          <p>${escapeHtml(it.text)}</p>
-          <div class="actions">
-            <button data-act="copy">コピー</button>
-            <button data-act="edit">編集</button>
-            <button data-act="del" class="bad">削除</button>
-          </div>
-        `;
-
-        div.querySelector('[data-act="copy"]').addEventListener("click", async () => {
-          await copyText(it.text);
-        });
-
-        div.querySelector('[data-act="edit"]').addEventListener("click", () => {
-          const next = prompt("編集（1行日記）", it.text);
-          if (next == null) return;
-          const trimmed = next.trim();
-          if (!trimmed) return toast("空は保存できません");
-          it.text = trimmed;
-          saveAll(items);
-          renderList();
-          toast("更新しました");
-        });
-
-        div.querySelector('[data-act="del"]').addEventListener("click", () => {
-          if (!confirm("この日記を削除しますか？")) return;
-          items = items.filter(x => x.id !== it.id);
-          saveAll(items);
-          renderList();
-          toast("削除しました");
-        });
-
-        el.appendChild(div);
-      }
-
-      updateStats();
-    }
-
-    function labelTone(t){
-      return ({
-        soft:"やさしい",
-        cool:"淡々",
-        funny:"ちょい笑い",
-        poem:"詩っぽい",
-        biz:"ビジネス風"
-      })[t] || t;
-    }
-
-    function escapeHtml(str){
-      return String(str)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    async function copyText(text){
-      try{
-        await navigator.clipboard.writeText(text);
-        toast("コピーしました");
-      }catch(e){
-        // fallback
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        toast("コピーしました");
+      // pass bonus for any obstacle type
+      if(!o.passed && o.x + o.w < player.x){
+        o.passed = true;
+        score += 5;
       }
     }
 
-    // ========== Generator actions ==========
-    function generate() {
-      const mood = $("#mood").value;
-      const tone = $("#tone").value;
-      const keywords = splitKeywords($("#kw").value);
-      const note = $("#note").value;
+    // remove offscreen
+    while(obs.length && obs[0].x + obs[0].w < -90) obs.shift();
 
-      currentLine = buildLine({mood, tone, keywords, note});
-      $("#output").textContent = currentLine;
-    }
-
-    function saveCurrent() {
-      const text = ($("#output").textContent || "").trim();
-      if (!text || text === "まだ生成していません。") return toast("まず生成してね");
-
-      const item = {
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2),
-        ts: Date.now(),
-        date: nowISO(),
-        mood: $("#mood").value,
-        tone: $("#tone").value,
-        keywords: splitKeywords($("#kw").value),
-        text
-      };
-      items.push(item);
-      saveAll(items);
-      renderList();
-      toast("保存しました");
-    }
-
-    // outputをクリックで編集できるようにする
-    $("#output").addEventListener("click", () => {
-      const text = ($("#output").textContent || "").trim();
-      if (!text || text === "まだ生成していません。") return;
-      const next = prompt("生成結果を編集（保存前でもOK）", text);
-      if (next == null) return;
-      const trimmed = next.trim();
-      if (!trimmed) return toast("空にはできません");
-      $("#output").textContent = trimmed;
-      currentLine = trimmed;
-      toast("編集しました");
-    });
-
-    // Buttons
-    $("#genBtn").addEventListener("click", generate);
-    $("#shuffleBtn").addEventListener("click", () => { salt = Math.random(); generate(); toast("味変しました"); });
-    $("#saveBtn").addEventListener("click", saveCurrent);
-    $("#copyBtn").addEventListener("click", async () => {
-      const text = ($("#output").textContent || "").trim();
-      if (!text || text === "まだ生成していません。") return toast("まず生成してね");
-      await copyText(text);
-    });
-    $("#clearInputBtn").addEventListener("click", () => {
-      $("#kw").value = "";
-      $("#note").value = "";
-      toast("入力をクリア");
-    });
-
-    // Search/sort
-    $("#search").addEventListener("input", renderList);
-    $("#sort").addEventListener("change", renderList);
-
-    // Export/Import/Wipe
-    $("#exportBtn").addEventListener("click", async () => {
-      const data = JSON.stringify(items, null, 2);
-      await copyText(data);
-      toast("JSONをコピーしました");
-      alert("エクスポート(JSON)をクリップボードにコピーしました。\nメモ帳などに貼り付けて保存できます。");
-    });
-
-    $("#importBtn").addEventListener("click", () => {
-      const txt = prompt("インポートするJSONを貼り付けてください（配列）");
-      if (!txt) return;
-      const p = safeJSONParse(txt);
-      if (!p.ok || !Array.isArray(p.value)) {
-        alert("JSONの形式が違います（配列が必要）。");
-        return;
+    // collision
+    const pBox = {x: player.x, y: player.y, w: player.w, h: player.h};
+    for(const o of obs){
+      // slightly forgiving hitbox
+      const ob = { x:o.x+2, y:o.y+2, w:o.w-4, h:o.h-4 };
+      if(hit(pBox, ob)){
+        gameOver = true;
+        const finalScore = Math.floor(score);
+        if(finalScore > best){
+          best = finalScore;
+          localStorage.setItem("onekey_best", best);
+          $best.textContent = `BEST: ${best}`;
+        }
+        break;
       }
-      // 簡易バリデーション
-      const incoming = p.value
-        .filter(x => x && typeof x === "object" && typeof x.text === "string")
-        .map(x => ({
-          id: x.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2)),
-          ts: typeof x.ts === "number" ? x.ts : Date.now(),
-          date: x.date || nowISO(),
-          mood: x.mood || "neutral",
-          tone: x.tone || "soft",
-          keywords: Array.isArray(x.keywords) ? x.keywords.slice(0,6).map(String) : [],
-          text: String(x.text).trim()
-        }))
-        .filter(x => x.text);
+    }
+  }
 
-      if (!incoming.length) return alert("取り込めるデータがありませんでした。");
+  // ===== Draw =====
+  function draw(){
+    const w = cw(), h = ch();
+    const night = isNight();
 
-      // 既存とマージ（id重複は後勝ち）
-      const map = new Map(items.map(x => [x.id, x]));
-      for (const it of incoming) map.set(it.id, it);
-      items = Array.from(map.values());
-      saveAll(items);
-      renderList();
-      toast("インポートしました");
-    });
+    // palette (monochrome)
+    const BG   = night ? "#000" : "#fff";
+    const FG   = night ? "#fff" : "#000";
+    const SOFT = night ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.10)";
+    const SOFT2= night ? "rgba(255,255,255,.20)" : "rgba(0,0,0,.18)";
 
-    $("#wipeBtn").addEventListener("click", () => {
-      if (!items.length) return toast("ログは空です");
-      if (!confirm("全削除します。本当に？（元に戻せません）")) return;
-      if (!confirm("最終確認：ほんとに全削除しますか？")) return;
-      items = [];
-      saveAll(items);
-      renderList();
-      toast("全削除しました");
-    });
+    // background fill
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = BG;
+    ctx.fillRect(0,0,w,h);
 
-    // Keyboard shortcuts
-    document.addEventListener("keydown", (e) => {
-      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-      const cmd = isMac ? e.metaKey : e.ctrlKey;
-
-      // Enter to generate (avoid when typing in textarea with Shift+Enter etc.)
-      if (e.key === "Enter" && !e.shiftKey) {
-        const active = document.activeElement;
-        const isTextArea = active && active.tagName === "TEXTAREA";
-        if (!isTextArea) {
-          e.preventDefault();
-          generate();
+    // stars at night
+    if(night){
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "rgba(255,255,255,.90)";
+      for(const s of stars){
+        s.x -= (speed*0.12 + s.s) * 0.016;
+        if(s.x < -10){ s.x = w + 10; s.y = Math.random()*240; }
+        // twinkle
+        if(((time*0.7 + s.p*10) % 1.0) < 0.65){
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+          ctx.fill();
         }
       }
-
-      // Ctrl/Cmd + K focus search
-      if (cmd && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        $("#search").focus();
-        toast("検索へ");
+      ctx.globalAlpha = 1;
+    } else {
+      // clouds at day (monochrome)
+      ctx.fillStyle = "rgba(0,0,0,.10)";
+      for(const c of clouds){
+        c.x -= speed * c.s * 0.016;
+        if(c.x < -c.w - 30){
+          c.x = w + 30;
+          c.y = Math.random()*120 + 20;
+          c.w = rand(70, 140);
+          c.h = rand(18, 32);
+          c.s = rand(0.10, 0.25);
+        }
+        // simple cloud shape
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, c.w*0.28, c.h*0.45, 0, 0, Math.PI*2);
+        ctx.ellipse(c.x + c.w*0.18, c.y + 2, c.w*0.22, c.h*0.38, 0, 0, Math.PI*2);
+        ctx.ellipse(c.x - c.w*0.18, c.y + 3, c.w*0.20, c.h*0.34, 0, 0, Math.PI*2);
+        ctx.fill();
       }
-    });
+    }
 
-    // Initial render
-    generate();
-    renderList();
-    updateStats();
-  </script>
+    // ground
+    ctx.fillStyle = SOFT;
+    ctx.fillRect(0, GROUND_Y, w, h-GROUND_Y);
+    ctx.strokeStyle = SOFT2;
+    ctx.beginPath();
+    ctx.moveTo(0, GROUND_Y+0.5);
+    ctx.lineTo(w, GROUND_Y+0.5);
+    ctx.stroke();
+
+    // obstacles (all rectangles)
+    for(const o of obs){
+      ctx.fillStyle = FG;
+      roundRect(ctx, o.x, o.y, o.w, o.h, 7);
+      ctx.fill();
+
+      // inner cut for style
+      ctx.fillStyle = night ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.35)";
+      roundRect(ctx, o.x+3, o.y+3, o.w-6, o.h-6, 6);
+      ctx.fill();
+    }
+
+    // player (rectangle)
+    if(player.blink > 0){
+      ctx.save();
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = night ? "rgba(255,255,255,.65)" : "rgba(0,0,0,.35)";
+      ctx.fillStyle = FG;
+      roundRect(ctx, player.x, player.y, player.w, player.h, 10);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = FG;
+    roundRect(ctx, player.x, player.y, player.w, player.h, 10);
+    ctx.fill();
+
+    // face (invert)
+    const face = night ? "rgba(0,0,0,.55)" : "rgba(255,255,255,.55)";
+    ctx.fillStyle = face;
+    ctx.beginPath(); ctx.arc(player.x+11, player.y+18, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(player.x+23, player.y+18, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(player.x+12, player.y+28, 12, 5, 3); ctx.fill();
+
+    // overlays (start / game over)
+    if(!playing){
+      overlay("PRESS SPACE / TAP", "to start", night);
+    } else if(gameOver){
+      overlay("GAME OVER", "Press Space / Tap to restart", night);
+    }
+  }
+
+  function overlay(main, sub, night){
+    const w = cw(), h = ch();
+    const FG = night ? "#fff" : "#000";
+    const BG = night ? "rgba(255,255,255,.10)" : "rgba(0,0,0,.10)";
+    const PANEL = night ? "rgba(0,0,0,.55)" : "rgba(255,255,255,.78)";
+
+    ctx.fillStyle = PANEL;
+    roundRect(ctx, 22, 22, w-44, h-44, 18);
+    ctx.fill();
+
+    ctx.fillStyle = FG;
+    ctx.font = "800 34px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(main, w/2, h/2 - 10);
+
+    ctx.globalAlpha = 0.85;
+    ctx.font = "600 16px system-ui, sans-serif";
+    ctx.fillText(sub, w/2, h/2 + 22);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = BG;
+    ctx.font = "600 13px system-ui, sans-serif";
+    ctx.fillText(`SCORE: ${Math.floor(score)}  /  BEST: ${best}`, w/2, h/2 + 52);
+    ctx.textAlign = "start";
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    r = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function loop(now){
+    const dt = Math.min(0.033, (now - tPrev)/1000);
+    tPrev = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  playing = false;
+  requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
