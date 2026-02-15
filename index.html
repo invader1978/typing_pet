@@ -1,185 +1,577 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Plain Memo</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #121212;
-            --gutter-bg: #1a1a1a;
-            --text-color: #e0e0e0;
-            --line-number-color: #555;
-            --accent-color: #ffffff;
-            --font-family: 'JetBrains Mono', monospace;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Plain Memo Ultra</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: var(--font-family);
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-        }
+  <style>
+    :root{
+      --bg-color:#121212;
+      --gutter-bg:#1a1a1a;
+      --text-color:#e0e0e0;
+      --line-number-color:#555;
+      --accent-color:#ffffff;
+      --highlight-line-bg:#252525;
+      --font-family:'JetBrains Mono', monospace;
+      --line-height-mult:1.6;
 
-        /* メインコンテナ（入力エリア + 行番号） */
-        .container { 
-            display: flex; 
-            height: calc(100svh - 35px); 
-            width: 100%; 
-        }
+      /* UI colors */
+      --ui-bg:#121212;
+      --ui-border:#444;
+      --ui-text:#e0e0e0;
+      --ui-focus:#ffffff;
+      --ui-option-bg:#121212;
+      --ui-option-active:#2a2a2a;
+    }
 
-        #line-numbers {
-            width: 50px; padding: 20px 0; text-align: right;
-            background-color: var(--gutter-bg); color: var(--line-number-color);
-            font-size: 13px; line-height: 1.6; user-select: none; overflow: hidden;
-            border-right: 1px solid #222;
-        }
+    body, html{
+      margin:0; padding:0; height:100%;
+      background-color:var(--bg-color);
+      color:var(--text-color);
+      font-family:var(--font-family);
+      overflow:hidden;
+      position:fixed;
+      width:100%;
+    }
 
-        #editor {
-            flex: 1; padding: 20px; border: none; outline: none;
-            background: transparent; color: inherit; font-family: inherit;
-            font-size: 16px; line-height: 1.6; resize: none;
-            white-space: pre; overflow: auto;
-            -webkit-appearance: none;
-            caret-color: var(--accent-color); /* カーソルの色 */
-        }
+    .container{
+      display:flex;
+      height:calc(100svh - 35px);
+      width:100%;
+      position:relative;
+    }
 
-        /* 下部ステータスバー */
-        .status-bar {
-            height: 35px; background: #1a1a1a;
-            display: flex; justify-content: space-between;
-            align-items: center; padding: 0 15px; font-size: 11px; color: #777;
-            border-top: 1px solid #222;
-            box-sizing: border-box;
-        }
+    #line-numbers{
+      width:50px;
+      padding:20px 0;
+      text-align:right;
+      background-color:var(--gutter-bg);
+      color:var(--line-number-color);
+      user-select:none;
+      overflow:hidden;
+      border-right:1px solid #222;
+      white-space:pre;
+      pointer-events:none;
+      box-sizing:border-box;
+      z-index:0;
+    }
 
-        .logo { font-weight: 500; color: #999; letter-spacing: 1px; }
+    #editor{
+      flex:1;
+      padding:20px;
+      border:none;
+      outline:none;
+      background:transparent;
+      color:inherit;
+      font-family:inherit;
+      font-size:16px; /* JSが上書き */
+      line-height:var(--line-height-mult);
+      resize:none;
+      overflow:auto;
+      -webkit-appearance:none;
+      caret-color:var(--accent-color);
+      z-index:2;
+      box-sizing:border-box;
+      white-space:pre; /* 初期は折り返さない（JSで切替） */
+    }
 
-        .controls { display: flex; align-items: center; }
+    /* 現在行ハイライト（帯） */
+    #current-line{
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
+      height:0; /* JSで設定 */
+      background:var(--highlight-line-bg);
+      opacity:0.85;
+      pointer-events:none;
+      z-index:1;
+      transform:translateY(-9999px);
+    }
 
-        #stats { margin-right: 5px; }
+    .status-bar{
+      height:35px;
+      background:#1a1a1a;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:0 15px;
+      font-size:11px;
+      color:#777;
+      border-top:1px solid #222;
+      box-sizing:border-box;
+      gap:10px;
+    }
 
-        .controls button {
-            background: transparent; border: 1px solid #444; color: #aaa;
-            padding: 3px 12px; cursor: pointer; font-size: 10px;
-            border-radius: 2px; margin-left: 15px; transition: 0.2s;
-            text-transform: uppercase;
-        }
+    .logo{ font-weight:500; color:#999; letter-spacing:1px; white-space:nowrap; }
 
-        /* PCでのホバー時のみ色を変える */
-        @media (hover: hover) {
-            .controls button:hover { border-color: #fff; color: #fff; }
-        }
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
 
-        /* スマホ・タブレット向けの調整 */
-        @media (max-width: 600px) {
-            #line-numbers { width: 40px; font-size: 12px; }
-            #editor { font-size: 15px; padding: 15px; }
-            #stats { display: none; } /* スマホでは文字数情報を非表示にしてスッキリ */
-        }
-    </style>
+    #stats{
+      color:#777;
+      white-space:nowrap;
+    }
+
+    .controls button{
+      background:transparent;
+      border:1px solid var(--ui-border);
+      color:#aaa;
+      padding:3px 10px;
+      cursor:pointer;
+      font-size:10px;
+      border-radius:2px;
+      transition:0.2s;
+      white-space:nowrap;
+    }
+
+    .font-controls{
+      display:flex;
+      gap:6px;
+      align-items:center;
+    }
+
+    .wrap-controls{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      white-space:nowrap;
+    }
+
+    .wrap-controls select,
+    .wrap-controls input{
+      background:var(--ui-bg);
+      border:1px solid var(--ui-border);
+      color:var(--ui-text);
+      font-size:10px;
+      padding:3px 6px;
+      border-radius:2px;
+      outline:none;
+    }
+
+    .wrap-controls input{ width:54px; }
+
+    /* ===== SELECT / OPTION ダーク対応 ===== */
+    .wrap-controls select{
+      color-scheme: dark;
+      appearance:none;
+      -webkit-appearance:none;
+      -moz-appearance:none;
+    }
+    .wrap-controls select option{
+      background:var(--ui-option-bg);
+      color:var(--ui-text);
+    }
+    .wrap-controls select option:checked{
+      background:var(--ui-option-active);
+      color:#fff;
+    }
+    .wrap-controls select:focus,
+    .wrap-controls input:focus{
+      border-color:var(--ui-focus);
+    }
+
+    @media (hover:hover){
+      .controls button:hover{ border-color:#fff; color:#fff; }
+      .wrap-controls select:hover,
+      .wrap-controls input:hover{ border-color:#fff; color:#fff; }
+    }
+
+    @media (max-width:600px){
+      #line-numbers{ width:40px; }
+      #editor{ padding:15px; }
+      #stats{ display:none; }
+    }
+
+    /* Toast */
+    #toast{
+      position:fixed;
+      bottom:60px;
+      left:50%;
+      transform:translateX(-50%) translateY(10px);
+      background:#1f1f1f;
+      color:#fff;
+      padding:8px 16px;
+      font-size:12px;
+      border-radius:6px;
+      opacity:0;
+      pointer-events:none;
+      transition:all 0.25s ease;
+      border:1px solid #333;
+      z-index:999;
+      white-space:nowrap;
+    }
+    #toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    /* caret計測用ミラー（非表示） */
+    #mirror{
+      position:absolute;
+      top:-99999px;
+      left:-99999px;
+      visibility:hidden;
+      white-space:pre-wrap;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <div id="line-numbers">1</div>
-        <textarea id="editor" spellcheck="false" autocomplete="off" placeholder="Type something..."></textarea>
+  <div class="container" id="wrap">
+    <div id="line-numbers">1</div>
+    <div id="current-line"></div>
+    <textarea id="editor" spellcheck="false" autocomplete="off" placeholder="Type something..."></textarea>
+  </div>
+
+  <div class="status-bar">
+    <div class="logo">PLAIN MEMO</div>
+
+    <div class="controls">
+      <span id="stats">LN: 1 | CH: 0 | FS: 16px</span>
+
+      <div class="wrap-controls" title="Wrap Mode">
+        <select id="wrapMode">
+          <option value="auto">右端で折り返す</option>
+          <option value="col">指定桁で折り返す</option>
+          <option value="off">折り返さない</option>
+        </select>
+        <input id="wrapCol" type="number" min="20" max="300" step="1" value="80" title="Columns (e.g. 80)" />
+      </div>
+
+      <div class="font-controls">
+        <button onclick="changeFontSize(-1)" title="Font size down (Ctrl/Cmd + -)">A-</button>
+        <button onclick="changeFontSize(1)" title="Font size up (Ctrl/Cmd + +)">A+</button>
+      </div>
+
+      <button onclick="downloadText()" title="Export (Ctrl/Cmd + S)">Export</button>
     </div>
+  </div>
 
-    <div class="status-bar">
-        <div class="logo">PLAIN MEMO</div>
-        <div class="controls">
-            <span id="stats">LN: 1 | CH: 0</span>
-            <button onclick="downloadText()">Export</button>
-        </div>
-    </div>
+  <div id="toast"></div>
+  <div id="mirror"></div>
 
-    <script>
-        const editor = document.getElementById('editor');
-        const lineNumbers = document.getElementById('line-numbers');
-        const stats = document.getElementById('stats');
+  <script>
+    const editor = document.getElementById('editor');
+    const lineNumbers = document.getElementById('line-numbers');
+    const stats = document.getElementById('stats');
+    const toastEl = document.getElementById('toast');
+    const currentLineEl = document.getElementById('current-line');
+    const mirror = document.getElementById('mirror');
 
-        // 状態更新（行番号・文字数・保存）
-        function updateEditor() {
-            const text = editor.value;
-            const lines = text.split('\n');
-            
-            // 行番号の描画
-            lineNumbers.innerText = Array.from({length: lines.length}, (_, i) => i + 1).join('\n');
-            
-            // ステータス更新
-            stats.innerText = `LN: ${lines.length} | CH: ${text.length}`;
-            
-            // ローカルストレージに保存
-            localStorage.setItem('plain-memo-data-v1', text);
+    const wrapModeSel = document.getElementById('wrapMode');
+    const wrapColInput = document.getElementById('wrapCol');
+
+    let toastTimer = null;
+    let lastRenderedLines = 0;
+
+    const DATA_KEY = 'plain-memo-data-v1';
+    const FONT_KEY = 'plain-memo-font-size';
+    const WRAP_MODE_KEY = 'plain-memo-wrap-mode';
+    const WRAP_COL_KEY = 'plain-memo-wrap-col';
+
+    const FONT_MIN = 12;
+    const FONT_MAX = 28;
+    const LINE_HEIGHT_MULT = 1.6;
+
+    let fontSize = parseInt(localStorage.getItem(FONT_KEY), 10);
+    if (Number.isNaN(fontSize)) fontSize = 16;
+
+    let wrapMode = localStorage.getItem(WRAP_MODE_KEY) || 'auto'; // auto | col | off
+    let wrapCol = parseInt(localStorage.getItem(WRAP_COL_KEY), 10);
+    if (Number.isNaN(wrapCol)) wrapCol = 80;
+
+    let lineHeightPx = Math.round(fontSize * LINE_HEIGHT_MULT);
+
+    function showToast(message){
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1200);
+    }
+
+    function applyFontSize(){
+      lineHeightPx = Math.round(fontSize * LINE_HEIGHT_MULT);
+
+      // editor と lineNumbers を同期（ズレ防止）
+      editor.style.fontSize = fontSize + "px";
+      lineNumbers.style.fontSize = fontSize + "px";
+
+      editor.style.lineHeight = lineHeightPx + "px";
+      lineNumbers.style.lineHeight = lineHeightPx + "px";
+
+      // ハイライト帯の高さ
+      currentLineEl.style.height = lineHeightPx + "px";
+
+      syncMirrorStyle();
+      updateEditor();               // ← ここで行番号も再描画
+      updateCurrentLineHighlight();
+    }
+
+    function changeFontSize(delta){
+      fontSize += delta;
+      if (fontSize < FONT_MIN) fontSize = FONT_MIN;
+      if (fontSize > FONT_MAX) fontSize = FONT_MAX;
+
+      localStorage.setItem(FONT_KEY, String(fontSize));
+      applyFontSize();
+      showToast(`Font Size: ${fontSize}px`);
+    }
+
+    function applyWrapMode(){
+      wrapModeSel.value = wrapMode;
+      wrapColInput.value = String(wrapCol);
+      wrapColInput.style.display = (wrapMode === 'col') ? 'inline-block' : 'none';
+
+      if (wrapMode === 'auto') {
+        // 右端で折り返す
+        editor.setAttribute('wrap', 'soft');
+        editor.style.whiteSpace = 'pre-wrap';
+        editor.style.wordBreak = 'break-word';
+        editor.style.overflowWrap = 'anywhere';
+        editor.style.overflowX = 'hidden';
+        editor.style.maxWidth = '';
+      } else if (wrapMode === 'col') {
+        // 指定桁で折り返す（表示幅を Nch に制限）
+        editor.setAttribute('wrap', 'soft');
+        editor.style.whiteSpace = 'pre-wrap';
+        editor.style.wordBreak = 'break-word';
+        editor.style.overflowWrap = 'anywhere';
+        editor.style.overflowX = 'hidden';
+        editor.style.maxWidth = `${wrapCol}ch`;
+      } else {
+        // 折り返さない
+        editor.setAttribute('wrap', 'off');
+        editor.style.whiteSpace = 'pre';
+        editor.style.wordBreak = 'normal';
+        editor.style.overflowWrap = 'normal';
+        editor.style.overflowX = 'auto';
+        editor.style.maxWidth = '';
+      }
+
+      localStorage.setItem(WRAP_MODE_KEY, wrapMode);
+      localStorage.setItem(WRAP_COL_KEY, String(wrapCol));
+
+      syncMirrorStyle();
+      updateEditor();               // ← wrap変更で表示行数が変わるので更新
+      updateCurrentLineHighlight();
+
+      showToast(
+        wrapMode === 'auto' ? 'Wrap: Auto' :
+        wrapMode === 'col'  ? `Wrap: ${wrapCol} cols` :
+                              'Wrap: Off'
+      );
+    }
+
+    // ★ここが今回の肝：表示上の行数で行番号を先回り描画
+    function getRenderedLineCount(){
+      // scrollHeightには「空白行」「折り返し」「末尾改行」も反映される
+      const lines = Math.ceil(editor.scrollHeight / lineHeightPx);
+      return Math.max(lines, 1);
+    }
+
+    function updateEditor(){
+      const text = editor.value;
+
+      const renderedLines = getRenderedLineCount();
+
+      if (renderedLines !== lastRenderedLines){
+        let numbers = "";
+        for (let i = 1; i <= renderedLines; i++) numbers += i + "\n";
+        lineNumbers.textContent = numbers;
+        lastRenderedLines = renderedLines;
+      }
+
+      stats.innerText = `LN: ${renderedLines} | CH: ${text.length} | FS: ${fontSize}px`;
+      localStorage.setItem(DATA_KEY, text);
+    }
+
+    function downloadText(){
+      const text = editor.value;
+      if (!text){
+        showToast("内容が空です");
+        return;
+      }
+
+      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      const blob = new Blob([bom, text], { type: 'text/plain;charset=utf-8' });
+
+      const a = document.createElement('a');
+      a.download = `memo_${Date.now()}.txt`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 100);
+
+      showToast("✔ Exported");
+    }
+
+    // === 現在行ハイライト（キャレットの表示上の行へ追従） ===
+    function syncMirrorStyle(){
+      const cs = getComputedStyle(editor);
+      mirror.style.fontFamily = cs.fontFamily;
+      mirror.style.fontSize = cs.fontSize;
+      mirror.style.lineHeight = cs.lineHeight;
+      mirror.style.padding = cs.padding;
+      mirror.style.border = cs.border;
+      mirror.style.boxSizing = cs.boxSizing;
+      mirror.style.width = cs.width;
+
+      if (wrapMode === 'off') {
+        mirror.style.whiteSpace = 'pre';
+        mirror.style.wordBreak = 'normal';
+        mirror.style.overflowWrap = 'normal';
+      } else {
+        mirror.style.whiteSpace = 'pre-wrap';
+        mirror.style.wordBreak = 'break-word';
+        mirror.style.overflowWrap = 'anywhere';
+      }
+    }
+
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, (c) => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+    }
+
+    function getCaretVisualTop(){
+      const pos = editor.selectionStart || 0;
+      const text = editor.value;
+
+      const before = escapeHtml(text.slice(0, pos));
+      const after = escapeHtml(text.slice(pos));
+
+      mirror.innerHTML =
+        before +
+        '<span id="caret-marker">&#8203;</span>' +
+        after;
+
+      const marker = document.getElementById('caret-marker');
+      return marker ? marker.offsetTop : 0;
+    }
+
+    function updateCurrentLineHighlight(){
+      const gutterWidth = lineNumbers.getBoundingClientRect().width;
+      currentLineEl.style.left = gutterWidth + "px";
+      currentLineEl.style.right = "0px";
+
+      const caretTop = getCaretVisualTop();
+      const y = caretTop - editor.scrollTop;
+
+      currentLineEl.style.transform = `translateY(${Math.round(y)}px)`;
+    }
+
+    // === wrap UI ===
+    wrapModeSel.addEventListener('change', () => {
+      wrapMode = wrapModeSel.value;
+      applyWrapMode();
+    });
+
+    wrapColInput.addEventListener('change', () => {
+      const n = parseInt(wrapColInput.value, 10);
+      if (!Number.isNaN(n)) {
+        wrapCol = Math.min(300, Math.max(20, n));
+        if (wrapMode === 'col') applyWrapMode();
+      }
+    });
+
+    // === events ===
+    editor.addEventListener('input', () => {
+      updateEditor();
+      updateCurrentLineHighlight();
+    });
+    editor.addEventListener('click', updateCurrentLineHighlight);
+    editor.addEventListener('keyup', updateCurrentLineHighlight);
+    editor.addEventListener('select', updateCurrentLineHighlight);
+
+    editor.addEventListener('scroll', () => {
+      requestAnimationFrame(() => {
+        lineNumbers.scrollTop = editor.scrollTop;
+        updateCurrentLineHighlight();
+      });
+    });
+
+    editor.addEventListener('keydown', (e) => {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const value = editor.value;
+
+      // Ctrl/Cmd + S: Export
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+        e.preventDefault();
+        downloadText();
+        return;
+      }
+
+      // Ctrl/Cmd + + / - : Font size
+      if (e.ctrlKey || e.metaKey){
+        if (e.key === '+' || e.key === '='){
+          e.preventDefault();
+          changeFontSize(1);
+          return;
         }
-
-        // ファイル名の生成 (memo_YYYYMMDDHHMMSS.txt)
-        function getTimestampFilename() {
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const Y = now.getFullYear();
-            const M = pad(now.getMonth() + 1);
-            const D = pad(now.getDate());
-            const h = pad(now.getHours());
-            const m = pad(now.getMinutes());
-            const s = pad(now.getSeconds());
-            return `memo_${Y}${M}${D}${h}${m}${s}.txt`;
+        if (e.key === '-'){
+          e.preventDefault();
+          changeFontSize(-1);
+          return;
         }
+      }
 
-        // ダウンロード実行（文字化け対策BOM付き）
-        function downloadText() {
-            const text = editor.value;
-            if (!text) {
-                alert("内容が空です。");
-                return;
-            }
+      // Tab: インデント
+      if (e.key === 'Tab'){
+        e.preventDefault();
+        editor.value = value.substring(0, start) + "    " + value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 4;
+        updateEditor();
+        updateCurrentLineHighlight();
+        return;
+      }
 
-            // UTF-8のBOMを追加して、スマホでの表示時の文字化けを防止
-            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-            const blob = new Blob([bom, text], { type: 'text/plain;charset=utf-8' });
-            
-            const anchor = document.createElement('a');
-            anchor.download = getTimestampFilename();
-            anchor.href = window.URL.createObjectURL(blob);
-            anchor.click();
-            
-            // メモリ解放
-            setTimeout(() => window.URL.revokeObjectURL(anchor.href), 100);
-        }
+      // Enter: 自動インデント
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        const lastLine = value.substring(0, start).split('\n').pop();
+        const indent = (lastLine.match(/^\s*/) || [""])[0];
+        const insert = "\n" + indent;
 
-        // イベントリスナー
-        editor.addEventListener('input', updateEditor);
-        
-        // スクロール同期
-        editor.addEventListener('scroll', () => {
-            lineNumbers.scrollTop = editor.scrollTop;
-        });
+        editor.value = value.substring(0, start) + insert + value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + insert.length;
+        updateEditor();
+        updateCurrentLineHighlight();
+        return;
+      }
+    });
 
-        // ページ読み込み時の処理
-        window.onload = () => {
-            const savedData = localStorage.getItem('plain-memo-data-v1');
-            if (savedData) {
-                editor.value = savedData;
-                updateEditor();
-            }
-            // PCブラウザのみ自動フォーカス
-            if (!('ontouchstart' in window)) {
-                editor.focus();
-            }
-        };
+    window.addEventListener('resize', () => {
+      requestAnimationFrame(() => {
+        syncMirrorStyle();
+        updateEditor();               // ← リサイズで折り返し行数が変わる
+        updateCurrentLineHighlight();
+      });
+    });
 
-        // ショートカットキー対応 (Ctrl/Cmd + S)
-        window.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                downloadText();
-            }
-        });
-    </script>
+    window.onload = () => {
+      const saved = localStorage.getItem(DATA_KEY);
+      if (saved) editor.value = saved;
+
+      // 初期UI反映
+      wrapModeSel.value = wrapMode;
+      wrapColInput.value = String(wrapCol);
+
+      applyWrapMode();
+      applyFontSize();
+      updateEditor();
+      updateCurrentLineHighlight();
+
+      if (!('ontouchstart' in window)) editor.focus();
+    };
+  </script>
 </body>
 </html>
