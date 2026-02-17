@@ -16,7 +16,7 @@
   --danger:#ff3b30;
   --radius:24px;
 
-  /* ✅ 改善②：削除ボタン幅を一元管理（CSS/JSで共有） */
+  /* 削除ボタン幅（CSS/JSで共有） */
   --actionW: 98px;
 
   /* iOSっぽい戻り（少しバネ感） */
@@ -25,6 +25,7 @@
 
 *{box-sizing:border-box;}
 html,body{height:100%; -webkit-text-size-adjust:100%;}
+
 body{
   margin:0;
   background:var(--bg);
@@ -35,20 +36,29 @@ body{
   -webkit-user-select:none;
   user-select:none;
   touch-action:manipulation;
+  overscroll-behavior:none;
 }
 
 button, .row{ -webkit-user-select:none; user-select:none; }
 input{ -webkit-user-select:text; user-select:text; }
 
-.phone{ width:390px; min-height:100vh; padding:14px; }
+/* ✅ レイアウト：カードは内容サイズ、＋は下寄せするが “下げすぎない” */
+.phone{
+  width:390px;
+  min-height:100vh;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+}
 
 /* =======================
-   Top Bar（タイトル完全固定）
+   Top Bar（タイトル固定）
 ======================= */
 .topbar{
   position:relative;
   height:64px;
   margin-bottom:14px;
+  flex:0 0 auto;
 }
 .top-left,
 .top-right{
@@ -58,7 +68,7 @@ input{ -webkit-user-select:text; user-select:text; }
   display:flex;
   align-items:center;
   gap:12px;
-  width:150px;          /* 固定幅（ズレ防止） */
+  width:150px;
 }
 .top-left{ left:0; }
 .top-right{ right:0; justify-content:flex-end; }
@@ -90,17 +100,19 @@ input{ -webkit-user-select:text; user-select:text; }
 }
 
 /* =======================
-   Card
+   Card（内容サイズ + 上限はJSで調整）
 ======================= */
 .card{
   background:var(--card);
   border-radius:var(--radius);
-  overflow:hidden;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  flex:0 0 auto; /* ✅ 伸びない＝間延びしない */
 }
 
 .swipe-wrap{ position:relative; overflow:hidden; width:100%; }
 
-/* ===== Swipe表示：通常は行が削除ボタンを完全に隠す ===== */
 .row{ width:100%; position:relative; z-index:2; }
 .actions{ z-index:1; }
 
@@ -115,11 +127,8 @@ input{ -webkit-user-select:text; user-select:text; }
   background:var(--danger);
   color:#fff;
   font-weight:900;
-
-  /* ✅ 改善③：角丸でiOSっぽく */
   border-top-left-radius:14px;
   border-bottom-left-radius:14px;
-
   transition:transform .12s ease, filter .12s ease;
 }
 .actions button:active{
@@ -146,14 +155,13 @@ input{ -webkit-user-select:text; user-select:text; }
   padding:18px 16px;
   border-bottom:1px solid var(--line);
   background:var(--card);
-
-  /* ✅ 改善③：戻りを少しスプリング寄りに */
   transition:transform .22s var(--spring), filter .12s ease;
   -webkit-touch-callout:none;
+
+  /* 縦スクロールは許可、横スワイプはJSで確定後に抑制 */
+  touch-action: pan-y;
 }
-.row:active{
-  filter:brightness(1.06);
-}
+.row:active{ filter:brightness(1.06); }
 .row:last-child{border-bottom:none;}
 .dragging{opacity:.35;}
 
@@ -166,7 +174,6 @@ input{ -webkit-user-select:text; user-select:text; }
   background:var(--accent);
   color:#fff;
   border:none;
-  font-size:18px;
   opacity:0;
   transform:translateX(-12px);
   pointer-events:none;
@@ -214,9 +221,19 @@ input{ -webkit-user-select:text; user-select:text; }
 }
 
 /* =======================
+   Spacer（✅ ＋を下に寄せるが “下げすぎない”）
+======================= */
+.spacer{
+  flex:1 1 auto;
+  max-height:80px;  /* ✅ 下げすぎ防止：ここで調整 */
+}
+
+/* =======================
    Add
 ======================= */
-.bottom{ margin-top:14px; }
+.bottom{
+  flex:0 0 auto;
+}
 .plus{
   width:60px;height:60px;
   border-radius:999px;
@@ -242,7 +259,6 @@ input{ -webkit-user-select:text; user-select:text; }
   padding:0 14px;
 }
 
-/* マイナス記号はフォントを使わずバーで描画（端末差ゼロで完全中央） */
 .del .minus-bar{
   display:block;
   width:14px;
@@ -258,23 +274,26 @@ input{ -webkit-user-select:text; user-select:text; }
 
   <div class="topbar">
     <div class="top-left">
-      <button class="iconbtn" id="trashBtn">🗑</button>
-      <button class="editbtn" id="editBtn">編集</button>
+      <button class="iconbtn" id="trashBtn" aria-label="全削除">🗑</button>
+      <button class="editbtn" id="editBtn" aria-label="編集モード切り替え">編集</button>
     </div>
 
     <div class="title">リスト</div>
 
     <div class="top-right">
-      <button class="iconbtn" id="shareBtn">共有</button>
+      <button class="iconbtn" id="shareBtn" aria-label="共有">共有</button>
     </div>
   </div>
 
-  <div class="card" id="list"></div>
+  <div class="card" id="list" role="list" aria-label="買い物リスト"></div>
+
+  <!-- ✅ ＋を下に寄せるが下げすぎないためのスペーサー -->
+  <div class="spacer" aria-hidden="true"></div>
 
   <div class="bottom">
-    <button class="plus" id="plusBtn">＋</button>
+    <button class="plus" id="plusBtn" aria-label="項目を追加">＋</button>
     <div class="inputwrap" id="inputWrap">
-      <input class="input" id="newText" placeholder="買うものを入力…" />
+      <input class="input" id="newText" placeholder="買うものを入力…" aria-label="追加する項目" />
     </div>
   </div>
 
@@ -298,8 +317,10 @@ const shareBtn = document.getElementById("shareBtn");
 const plusBtn  = document.getElementById("plusBtn");
 const inputWrap= document.getElementById("inputWrap");
 const newText  = document.getElementById("newText");
+const topbar   = document.querySelector(".topbar");
+const bottom   = document.querySelector(".bottom");
 
-/* ✅ 改善②：幅をCSS変数から取得（JS側も一元化） */
+/* 幅をCSS変数から取得（JS側も一元化） */
 const ACTION_W = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--actionW"), 10) || 98;
 
 function uid(){
@@ -309,7 +330,7 @@ function uid(){
   return "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
 }
 
-const KEY="shopping_list_ios_final_v4";
+const KEY="shopping_list_ios_final_v8";
 let items=[];
 let editMode=false;
 
@@ -320,20 +341,50 @@ let openEditId=null;
 /* Drag */
 let dragWrap=null;
 
-load();
-renderAll();
+/* ✅ 間延び解消：長い時だけカードにmax-height（自動計算） */
+function layoutCardHeight(){
+  const s = getComputedStyle(app);
+  const padTop = parseFloat(s.paddingTop) || 0;
+  const padBottom = parseFloat(s.paddingBottom) || 0;
+
+  // “＋が下に行きすぎない”分の余白も確保（spacerのmaxを想定）
+  const reserve = 80; // spacer上限と合わせる
+  const available = window.innerHeight - topbar.offsetHeight - bottom.offsetHeight - padTop - padBottom - reserve;
+
+  const maxH = Math.max(180, available - 14);
+  list.style.maxHeight = maxH + "px";
+}
+
+window.addEventListener("resize", layoutCardHeight);
+window.addEventListener("orientationchange", layoutCardHeight);
 
 /* =======================
-   Utils: Storage
+   Utils: Storage（破損耐性）
 ======================= */
-function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(items)); }catch{}
+}
 function load(){
-  const raw=localStorage.getItem(KEY);
-  items=raw?JSON.parse(raw):[];
+  const raw = localStorage.getItem(KEY);
+  if(!raw){ items=[]; return; }
+  try{
+    const parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed)){ items=[]; return; }
+    items = parsed
+      .map(x=>({
+        id: (x && typeof x.id==="string" && x.id) ? x.id : uid(),
+        text: String(x?.text ?? "").trim(),
+        done: !!x?.done
+      }))
+      .filter(x=>x.text);
+  }catch{
+    items=[];
+    try{ localStorage.removeItem(KEY); }catch{}
+  }
 }
 
 /* =======================
-   DOM Helpers (✅ 改善①：フルrenderを減らす)
+   DOM Helpers
 ======================= */
 function wrapEl(id){ return list.querySelector(`.swipe-wrap[data-id="${CSS.escape(id)}"]`); }
 function rowEl(id){ const w=wrapEl(id); return w ? w.querySelector(".row") : null; }
@@ -367,15 +418,14 @@ function closeAllSwipe(){
 /* =======================
    Top actions
 ======================= */
-editBtn.onclick=()=>{
+editBtn.addEventListener("click", ()=>{
   closeAllSwipe();
   editMode=!editMode;
   app.classList.toggle("edit",editMode);
   editBtn.textContent = editMode ? "✓" : "編集";
+  editBtn.setAttribute("aria-label", editMode ? "編集モード解除" : "編集モード切り替え");
 
-  // ✅ 改善①：全行の表示モードだけ切り替え（再描画しない）
   list.querySelectorAll(".swipe-wrap").forEach(w=>{
-    const id = w.dataset.id;
     const row = w.querySelector(".row");
     const cb = w.querySelector(".cb");
     const minus = w.querySelector(".del");
@@ -388,26 +438,26 @@ editBtn.onclick=()=>{
     w.classList.remove("show-actions");
     row.style.transition = "transform .22s var(--spring)";
     row.style.transform = "translateX(0)";
-
-    // ✅ click抑止フラグもリセット
     row._justSwiped = false;
   });
 
   openId = null;
   openEditId = null;
-};
+});
 
-trashBtn.onclick=()=>{
+trashBtn.addEventListener("click", ()=>{
   if(confirm("全削除しますか？")){
     items=[];
     save();
     list.innerHTML="";
     openId=null;
     openEditId=null;
+    layoutCardHeight();
   }
-};
+});
 
-shareBtn.onclick=async()=>{
+/* ✅ 共有：テキストだけ */
+shareBtn.addEventListener("click", async ()=>{
   const text=items.map(i=>`${i.done?"☑":"☐"} ${i.text}`).join("\n");
   try{
     if(navigator.share){
@@ -417,18 +467,24 @@ shareBtn.onclick=async()=>{
       alert("コピーしました");
     }
   }catch{}
-};
+});
 
-plusBtn.onclick=()=>{
+plusBtn.addEventListener("click", ()=>{
   if(!inputWrap.classList.contains("show")){
     inputWrap.classList.add("show");
     newText.focus();
+    layoutCardHeight();
   }else commitAdd();
-};
-newText.onkeydown=e=>{
+});
+
+newText.addEventListener("keydown", e=>{
   if(e.key==="Enter") commitAdd();
-  if(e.key==="Escape"){ inputWrap.classList.remove("show"); newText.value=""; }
-};
+  if(e.key==="Escape"){
+    inputWrap.classList.remove("show");
+    newText.value="";
+    layoutCardHeight();
+  }
+});
 
 function commitAdd(){
   const t=newText.value.trim();
@@ -440,8 +496,8 @@ function commitAdd(){
   inputWrap.classList.add("show");
   newText.focus();
 
-  // ✅ 改善①：追加分だけDOM追加
   list.appendChild(buildRow(it));
+  layoutCardHeight();
 }
 
 /* =======================
@@ -454,7 +510,7 @@ document.addEventListener("pointerdown",(e)=>{
 },{capture:true});
 
 /* =======================
-   Render (initial only)
+   Render
 ======================= */
 function renderAll(){
   list.innerHTML="";
@@ -468,6 +524,7 @@ function buildRow(it){
   const wrap=document.createElement("div");
   wrap.className="swipe-wrap";
   wrap.dataset.id=it.id;
+  wrap.setAttribute("role","listitem");
 
   // actions
   const actions=document.createElement("div");
@@ -475,7 +532,8 @@ function buildRow(it){
   const delBtn=document.createElement("button");
   delBtn.type="button";
   delBtn.textContent="削除";
-  delBtn.onclick=()=>removeOne(it.id);
+  delBtn.setAttribute("aria-label", `削除: ${it.text}`);
+  delBtn.addEventListener("click", ()=>removeOne(it.id));
   actions.appendChild(delBtn);
   wrap.appendChild(actions);
 
@@ -483,7 +541,7 @@ function buildRow(it){
   const row=document.createElement("div");
   row.className="row";
   row.style.transform="translateX(0)";
-  row._justSwiped = false; // ✅ 追加：スワイプ直後click抑止フラグ
+  row._justSwiped = false;
 
   // left (minus)
   const left=document.createElement("div");
@@ -493,7 +551,9 @@ function buildRow(it){
   minus.innerHTML='<span class="minus-bar" aria-hidden="true"></span>';
   minus.type="button";
   minus.style.display = editMode ? "inline-flex" : "none";
-  minus.onclick=()=>{
+  minus.setAttribute("aria-label", `削除メニュー: ${it.text}`);
+
+  minus.addEventListener("click", ()=>{
     if(!editMode) return;
 
     if(openEditId && openEditId !== it.id){
@@ -505,7 +565,8 @@ function buildRow(it){
     openEditId = willOpen ? it.id : null;
     wrap.classList.toggle("show-actions", willOpen);
     setRowX(it.id, willOpen ? -ACTION_W : 0);
-  };
+  });
+
   left.appendChild(minus);
   row.appendChild(left);
 
@@ -515,13 +576,30 @@ function buildRow(it){
   cb.className="cb";
   cb.checked=!!it.done;
   cb.disabled=editMode;
-  cb.onchange=()=>toggleDone(it.id, cb.checked);
+  cb.setAttribute("aria-label", `完了切り替え: ${it.text}`);
+  cb.addEventListener("change", ()=>toggleDone(it.id, cb.checked));
   row.appendChild(cb);
 
-  // text
+  // text（クリック/Enter/Spaceで完了切替）
   const text=document.createElement("div");
   text.className="text" + (it.done ? " checked":"");
   text.textContent=it.text;
+  text.setAttribute("role","button");
+  text.setAttribute("tabindex","0");
+  text.setAttribute("aria-label", `項目: ${it.text}（クリックで完了切替）`);
+  text.addEventListener("click", ()=>{
+    if(editMode) return;
+    cb.checked = !cb.checked;
+    toggleDone(it.id, cb.checked);
+  });
+  text.addEventListener("keydown", (e)=>{
+    if(editMode) return;
+    if(e.key==="Enter" || e.key===" "){
+      e.preventDefault();
+      cb.checked = !cb.checked;
+      toggleDone(it.id, cb.checked);
+    }
+  });
   row.appendChild(text);
 
   // handle
@@ -530,17 +608,18 @@ function buildRow(it){
   const handle=document.createElement("div");
   handle.className="handle";
   handle.textContent="≡";
-  handle.onpointerdown=e=>{
+  handle.setAttribute("aria-label","並べ替えハンドル");
+  handle.addEventListener("pointerdown", e=>{
     if(!editMode) return;
     e.preventDefault();
     e.stopPropagation();
     startDrag(e, wrap);
-  };
+  });
   right.appendChild(handle);
   row.appendChild(right);
 
-  // ✅ 修正1) row.onclick：スワイプ直後のclickを無視
-  row.onclick=(e)=>{
+  // row click（スワイプ直後click抑止）
+  row.addEventListener("click",(e)=>{
     if(row._justSwiped){
       row._justSwiped = false;
       return;
@@ -561,7 +640,7 @@ function buildRow(it){
         openId=null;
       }
     }
-  };
+  });
 
   // swipe only in normal mode
   attachSwipe(row, it.id);
@@ -571,7 +650,7 @@ function buildRow(it){
 }
 
 /* =======================
-   State ops (✅ 改善①：DOM直接更新)
+   State ops
 ======================= */
 function toggleDone(id,val){
   if(editMode) return;
@@ -584,6 +663,9 @@ function toggleDone(id,val){
   if(!w) return;
   const text = w.querySelector(".text");
   text.classList.toggle("checked", it.done);
+
+  const cb = w.querySelector(".cb");
+  if(cb) cb.checked = it.done;
 }
 
 function removeOne(id){
@@ -595,64 +677,84 @@ function removeOne(id){
 
   if(openId===id) openId=null;
   if(openEditId===id) openEditId=null;
+
+  layoutCardHeight();
 }
 
 /* =======================
-   Swipe (normal mode)
-   ✅ 修正2) pointerup確定時に click を1回だけ無視する
+   ✅ スワイプ削除：さらに“効きやすく”した版
+   ポイント：
+   - .text上からもスワイプ開始OK（ここが効きづらさの主因になりがち）
+   - 横判定を少し甘く（斜めでも拾う）
+   - 横確定後は capture + preventDefault で主導権を取る
 ======================= */
 function attachSwipe(row,id){
-  let startX=0, startY=0, swiping=false, baseX=0;
+  let startX=0, startY=0;
+  let swiping=false;
+  let active=false;
+  let baseX=0;
+  let pid=null;
 
+  // ✅ “スワイプ開始を阻害する要素”を最小限に
+  // .text は除外しない（＝テキスト上からでもスワイプできる）
   const isInteractive = (t) => !!t.closest("input,button,.handle,.del");
 
-  row.onpointerdown=(e)=>{
+  row.addEventListener("pointerdown",(e)=>{
     if(editMode) return;
     if(isInteractive(e.target)) return;
 
     closeOpenIfDifferent(id);
 
-    startX=e.clientX;
-    startY=e.clientY;
-    swiping=false;
+    active = true;
+    pid = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    swiping = false;
 
     baseX = (openId===id) ? -ACTION_W : 0;
     row.style.transition="none";
-  };
 
-  row.onpointermove=(e)=>{
-    if(editMode || startX===0) return;
+    try{ row.setPointerCapture(pid); }catch{}
+  }, {passive:true});
 
-    const dx=e.clientX-startX;
-    const dy=e.clientY-startY;
+  row.addEventListener("pointermove",(e)=>{
+    if(editMode || !active) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
 
     if(!swiping){
-      if(Math.abs(dx)<12) return;
-      if(Math.abs(dx)<=Math.abs(dy)) return;
-      swiping=true;
+      // ✅ 入りを早く
+      if(Math.abs(dx) < 7) return;
+
+      // ✅ 斜めでも拾う：dyが少し大きくても横とみなす
+      // 例）|dx| > |dy| * 0.85 なら横扱い
+      if(Math.abs(dx) <= Math.abs(dy) * 0.85) return;
+
+      swiping = true;
     }
+
+    // ✅ 横確定後はスクロール等を抑制
+    e.preventDefault();
 
     let x = baseX + dx;
     x = Math.min(0, Math.max(-ACTION_W, x));
     row.style.transform = `translateX(${x}px)`;
-  };
+  }, {passive:false});
 
-  row.onpointerup=()=>{
-    if(editMode) return;
-    if(startX===0) return;
+  const end = ()=>{
+    if(editMode || !active) return;
 
-    // タップ（スワイプしてない）なら、開いてたら閉じる
     if(!swiping){
       if(openId===id){
         row.style.transition="transform .22s var(--spring)";
         row.style.transform="translateX(0)";
         openId=null;
       }
-      startX=0;
+      active=false;
       return;
     }
 
-    // 現在位置を読む
     const tr=getComputedStyle(row).transform;
     let x=0;
     if(tr && tr!=="none"){
@@ -668,14 +770,14 @@ function attachSwipe(row,id){
     row.style.transform = `translateX(${willOpen ? -ACTION_W : 0}px)`;
     openId = willOpen ? id : null;
 
-    // ✅ 修正2) スワイプ後に発生する click を1回だけ無視する
     row._justSwiped = true;
     setTimeout(()=>{ row._justSwiped = false; }, 0);
 
-    startX=0;
+    active=false;
   };
 
-  row.onpointercancel=row.onpointerup;
+  row.addEventListener("pointerup", end, {passive:true});
+  row.addEventListener("pointercancel", end, {passive:true});
 }
 
 /* =======================
@@ -729,6 +831,11 @@ function persistOrder(){
   items = ordered.map(id=>map.get(id)).filter(Boolean);
   save();
 }
+
+/* init */
+load();
+renderAll();
+layoutCardHeight();
 </script>
 </body>
 </html>
